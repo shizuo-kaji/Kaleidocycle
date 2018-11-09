@@ -7,8 +7,6 @@ It has some visualisation features including creating animation and plans of pap
 
 
 ![K9](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/K9.gif?raw=true)
-
 ![K24div](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/K24div-trefoil.gif?raw=true)
-
 ![paper-K7](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/paper-K7.png?raw=true)
 
