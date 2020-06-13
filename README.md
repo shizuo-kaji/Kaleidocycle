@@ -16,7 +16,8 @@ For details, look at:
 ![K9](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/K9.gif?raw=true)
 ![K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/k8_t.gif?raw=true)
 ![K24div](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/K24div-trefoil.gif?raw=true)
-![paper-K7](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/paper-K7.jpg?raw=true)
 ![K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3dprint-K8.jpg?raw=true)
-![K7-trefoil](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3dprint-K7-trefiol.jpg?raw=true)
+![K7-trefoil](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3dprint_N7_trefoil.jpg?raw=true)
+![K12](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3dprint_N12.jpg?raw=true)
+![paper-K7](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/paper-K7.jpg?raw=true)
 
