@@ -10,6 +10,7 @@ They are modelled by [Kamagata Design Studio](https://kdstudio.jp/)
 For details, look at (click the title to get the document):
 * (latest presentation slides) [Geometry of Kaleidocycles](https://www.math.kyoto-u.ac.jp/~kaji/papers/Kaleidocycle21.pdf)
 presented at the Kyushu-Illinois Strategic Partnership Colloquia Series #2 Mathematics Without Borders - Applied and Applicable, 11 Mar. 2021
+* (latest expositition in Japanese) [Kaleidocycle](https://www.math.kyoto-u.ac.jp/~kaji/papers/ShapeDesign.pdf), 13 Mar. 2021
 * (conference presentation) 
 Shizuo Kaji, Eliot Fried, Michael Grunwald, Johannes Schoenke, 
 [Geometry of closed kinematic chain](https://www.math.kyoto-u.ac.jp/~kaji/files/Kaleidocycle17.pdf),
