@@ -3,11 +3,14 @@ Geometry of the moduli space of a closed linkage
 This maple script computes the shape and motion of Kaleidocycles satisfying various conditions.
 It has some visualisation features including creating animation and plans of paper models.
 
-3D printable models are also available under "models" directory.
+3D printable models are also available under the [*model* directory](model).
 They are modelled by [Kamagata Design Studio](https://kdstudio.jp/)
 
+The shape is patented, but please feel free to use any of the material here for personal use.
+* Shizuo Kaji, Johannes Schoenke, Eliot Fried, Michael Grunwald, [Moebius Kaleidocycle](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941), JP2018-033395(Japan), 2019JP007314(PCT), WO 2019167941(Publication Number), filed on 27 Feb. 2018.
 
-For details, look at (click the title to get the document):
+
+For details, please look at the [patent publication](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941) and the following materials (click the title to get the document):
 * (latest presentation slides) [Geometry of Kaleidocycles](https://www.math.kyoto-u.ac.jp/~kaji/papers/Kaleidocycle21.pdf)
 presented at the Kyushu-Illinois Strategic Partnership Colloquia Series #2 Mathematics Without Borders - Applied and Applicable, 11 Mar. 2021
 * (latest expositition in Japanese) [Kaleidocycle](https://www.math.kyoto-u.ac.jp/~kaji/papers/ShapeDesign.pdf), 13 Mar. 2021
@@ -15,7 +18,6 @@ presented at the Kyushu-Illinois Strategic Partnership Colloquia Series #2 Mathe
 Shizuo Kaji, Eliot Fried, Michael Grunwald, Johannes Schoenke, 
 [Geometry of closed kinematic chain](https://www.math.kyoto-u.ac.jp/~kaji/files/Kaleidocycle17.pdf),
 IMI Workshop Mathematics in Interface, Dislocation and Structure of Crystals, Nishijin plaza, Fukuoka, 29 Aug. 2017
-* (patent) Shizuo Kaji, Johannes Schoenke, Eliot Fried, Michael Grunwald, [Moebius Kaleidocycle](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941), JP2018-033395(Japan), 2019JP007314(PCT), WO 2019167941(Publication Number), filed on 27 Feb. 2018.
 * (conference abstract) Shizuo Kaji,  [A closed linkage mechanism having the shape of a discrete Mobius strip](https://arxiv.org/abs/1909.02885), the Symposium of the 2018 Spring meeting of the Japan Society for Precision Engineering, Tokyo, 17 Mar. 2018.
 * (the original Japanese version of above) 鍛冶静雄, [曲線の幾何学から生まれた閉リンク機構](https://www.math.kyoto-u.ac.jp/~kaji/papers/linkage.pdf), 2018年度精密工学会春季大会 シンポジウム資料集, pp. 62--65.
 * (paper) Shizuo Kaji, Kenji Kajiwara, Hyeongki Park, 
