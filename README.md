@@ -1,10 +1,19 @@
 Geometry of the moduli space of a closed linkage
 ==================
-This maple script computes the shape and motion of Kaleidocycles satisfying various conditions.
-It has some visualisation features including creating animation and plans of paper models.
+By Shizuo KAJI
 
-3D printable models are also available under the [*model* directory](model).
+This work was supported by Japan Science and Technology Agency (JST) PRESTO Grant Number JPMJPR16E3, Japan.
+
+# Files
+
+- *Kaleidocycle.mw* is the main Maple script that computes the shape and motion of Kaleidocycles satisfying various conditions.
+It has some visualisation features including creating animation and plans of paper models.
+- *Kaleidocycle.nb* is a similar script in Mathematica but comes with less functionality.
+- 3D printable models are available under the [*3d_model* directory](3d_model).
 They are modelled by [Kamagata Design Studio](https://kdstudio.jp/)
+- Paper models are available under the [*paper_model* directory](paper_model).
+
+# References
 
 The shape is patented, but please feel free to use any of the material here for personal use.
 * Shizuo Kaji, Johannes Schoenke, Eliot Fried, Michael Grunwald, [Moebius Kaleidocycle](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941), JP2018-033395(Japan), 2019JP007314(PCT), WO 2019167941(Publication Number), filed on 27 Feb. 2018.
@@ -23,20 +32,20 @@ IMI Workshop Mathematics in Interface, Dislocation and Structure of Crystals, Ni
 * (paper) Shizuo Kaji, Kenji Kajiwara, Hyeongki Park, 
 [Linkage Mechanisms Governed by Integrable Deformations of Discrete Space Curves](https://arxiv.org/abs/1903.06360), in Nonlinear Systems and Their Remarkable Mathematical Structures, Volume 2, pp 356--381, CRC Press, 2019
 * (in Japanese) 鍛冶静雄, [数理のクロスロード／かたちと動きの数理基盤／(1) リンク万華鏡](https://www.math.kyoto-u.ac.jp/~kaji/papers/susemi201906-linkage.pdf), 数学セミナー 2019年6月号, 日本評論社, 2019.
-
+* (in Japanese) 鍛冶静雄, [かたちを算する／おもちゃのかたち](https://www.nippyo.co.jp/shop/magazine/8418.html), 数学セミナー 2021年1月号, 日本評論社, 2021.
 
 Some of the results described above are also published in
 * Johannes Schoenke and Eliot Fried,
 [Single degree of freedom everting ring linkages with nonorientable topology](https://www.pnas.org/content/116/1/90.abstract), PNAS 116 (1), 90--95, 2019.
 
 
-![K9](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/K9.gif?raw=true)
-![K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/k8_t.gif?raw=true)
-![K24div](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/K24div-trefoil.gif?raw=true)
-![K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3dprint-K8.jpg?raw=true)
-![K8-straw](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/straw-K8.jpg?raw=true)
-![K7-trefoil](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3dprint_N7_trefoil.jpg?raw=true)
-![K12](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3dprint_N12.jpg?raw=true)
-![paper-K7](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/paper-K7.jpg?raw=true)
+![K9](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/K9.gif?raw=true)
+![K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/k8_t.gif?raw=true)
+![K24div](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/K24div-trefoil.gif?raw=true)
+![K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/3dprint-K8.jpg?raw=true)
+![K8-straw](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/straw-K8.jpg?raw=true)
+![K7-trefoil](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/3dprint_N7_trefoil.jpg?raw=true)
+![K12](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/3dprint_N12.jpg?raw=true)
+![paper-K7](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/paper_model/paper-K7.jpg?raw=true)
 
 
