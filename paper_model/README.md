@@ -1,3 +1,5 @@
+[English](README.md) | [日本語](README.ja.md) 
+
 # Paper model of Kaleidocycle
 
 1. Cut along the outer boundary
