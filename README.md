@@ -1,3 +1,5 @@
+[English](README.md) | [日本語](README.ja.md) 
+
 Geometry of the moduli space of a closed linkage
 ==================
 By Shizuo KAJI
