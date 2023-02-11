@@ -2,6 +2,15 @@
 
 # Paper model of Kaleidocycle
 
+## Paper Plan
+
+- [K7](paper-K7.pdf): Mobius Kaleidocycle with 7 tetrahedra
+- [K8](paper-K8.pdf): Mobius Kaleidocycle with 8 tetrahedra
+- [K9](paper-K9.pdf): Mobius Kaleidocycle with 9 tetrahedra
+- Paper plans for Kaleidocycles with 10 or more tetrahedra can be obtained by [Maple code](../Kaleidocycle.mw)
+
+## How to make
+
 1. Cut along the outer boundary
 2. The triangles in the right-most column and the bottom row are the glue allowance
 3. Each row makes a tetrahedron
@@ -11,3 +20,4 @@
 7. Fold tetrahedra from the top row
 8. Insert the two gluing triangles at the bottom row into the tetrahedron corresponding to the first row
 
+![paper-K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/paper_model/paper-K8.png?raw=true)
