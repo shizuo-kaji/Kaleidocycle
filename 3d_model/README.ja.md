@@ -11,7 +11,7 @@
 - K12: 12個のパネルからなるメビウス・カライドサイクル．
 [K12パネル](Kaleidocycle_N12_band.stl), [K12ヒンジ](Kaleidocycle_N12_hinge.stl)
 - K7Trefoil: 14個の四面体からなるカライドサイクル．一次元自由度で回すためには，２枚ずつのパネルを長いヒンジで連結する必要があります．
-[K7Treパネル](Kaleidocycle_N7 Trefoil_band.stl), [K7Treヒンジ](Kaleidocycle_N7 Trefoil_hinge.stl)
+[K7Treパネル](Kaleidocycle_N7Trefoil_band.stl), [K7Treヒンジ](Kaleidocycle_N7Trefoil_hinge.stl)
 
 ## 作り方
 
