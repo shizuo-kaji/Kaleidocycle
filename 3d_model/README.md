@@ -18,6 +18,7 @@ For this to have 1-DoF, pairs of panels should be connected together with long h
 
 Print the appropriate numbers of the parts (band and hinge) from the corresponding STL files.
 
-![3d-K7Tre](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3d_model/Kaleidocycle_N7Trefoil_all_connected.png?raw=true)
-![3d-K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3d_model/Kaleidocycle_N8_all.png?raw=true)
-![3d-K12](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/3dprint_N12.jpg?raw=true)
+<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3d_model/Kaleidocycle_N8_all.png?raw=true" width="30%" />
+<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/3dprint_N12.jpg?raw=true" width="30%" />
+<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3d_model/Kaleidocycle_N7Trefoil_all_connected.png?raw=true" width="30%" />
+

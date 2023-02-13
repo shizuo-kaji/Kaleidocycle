@@ -17,6 +17,7 @@
 
 パネル・ヒンジをそれぞれ適切な数だけ STL ファイルから印刷して，組み上げてください．
 
-![3d-K7Tre](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3d_model/Kaleidocycle_N7Trefoil_all_connected.png?raw=true)
-![3d-K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3d_model/Kaleidocycle_N8_all.png?raw=true)
-![3d-K12](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/3dprint_N12.jpg?raw=true)
+<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3d_model/Kaleidocycle_N8_all.png?raw=true" width="30%" />
+<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/3dprint_N12.jpg?raw=true" width="30%" />
+<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3d_model/Kaleidocycle_N7Trefoil_all_connected.png?raw=true" width="30%" />
+
