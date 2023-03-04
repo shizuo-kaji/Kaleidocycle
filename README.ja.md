@@ -16,8 +16,9 @@
 
 - [Kaleidocycle.mw](Kaleidocycle.mw) は Maple のコードで，様々な条件下でカライドサイクルの形状や動きを計算し，可視化します．折り紙展開図の出力機能もあります．
 - [Kaleidocycle.nb](Kaleidocycle.nb) は Mathematica のコードで，上の Maple コードの機能限定版です．
-- 3Dプリンタで出力可能なモデルは[*3d_model* ディレクトリ](3d_model/)にあります.
-- 折り紙展開図は[*paper_model* ディレクトリ](paper_model/)にあります.
+- [*3d_model* ディレクトリ](3d_model/) には3Dプリンタで出力可能なモデルがあります.
+- [*paper_model* ディレクトリ](paper_model/) には折り紙の展開図があります.
+- [*hexagon* directory](hexagon/) にはカライドサイクルの仲間であるヘクサフレクサゴンの折り紙があります．また，カライドサイクルの折り方の説明図もあります．
 
 # 参考資料
 

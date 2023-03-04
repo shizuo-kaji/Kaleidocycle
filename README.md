@@ -11,9 +11,10 @@ This work was supported by Japan Science and Technology Agency (JST) PRESTO Gran
 - [Kaleidocycle.mw](Kaleidocycle.mw) is the main Maple script that computes the shape and motion of Kaleidocycles satisfying various conditions.
 It has some visualisation features including creating animation and plans of paper models.
 - [Kaleidocycle.nb](Kaleidocycle.nb) is a similar script in Mathematica but comes with less functionality.
-- 3D printable models are available under the [*3d_model* directory](3d_model/).
+- [*3d_model* directory](3d_model/) contains 3D printable models.
 They are modelled by [Kamagata Design Studio](https://kdstudio.jp/)
-- Paper models are available under the [*paper_model* directory](paper_model/).
+- [*paper_model* directory](paper_model/) contains paper models foldable by hand.
+- [*hexagon* directory](hexagon/) contains a paper model of the hexaflexagon, a two-dimensional cousin of Kaleidocycle.
 
 # References
 
