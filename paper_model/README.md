@@ -20,4 +20,5 @@
 7. Fold tetrahedra from the top row
 8. Insert the two gluing triangles at the bottom row into the tetrahedron corresponding to the first row
 
-![paper-K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/paper_model/paper-K8.png?raw=true)
+<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/paper_model/paper-K8.png?raw=true" width="30%" />
+<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/K8_origami.jpg?raw=true" width="30%" />

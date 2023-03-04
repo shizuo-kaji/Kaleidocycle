@@ -19,3 +19,6 @@
 6. のりしろの三角形にのりをつけてください．
 7. 上の段から順に四面体に折ってゆきます．
 8. 最後に最下段の２枚ののりしろ三角形を，最上段の四面体に差し込んで完成です．
+
+<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/paper_model/paper-K8.png?raw=true" width="30%" />
+<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/K8_origami.jpg?raw=true" width="30%" />
