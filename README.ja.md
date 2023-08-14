@@ -14,11 +14,11 @@
 
 # ファイル
 
-- [Kaleidocycle.mw](Kaleidocycle.mw) は Maple のコードで，様々な条件下でカライドサイクルの形状や動きを計算し，可視化します．折り紙展開図の出力機能もあります．
-- [Kaleidocycle.nb](Kaleidocycle.nb) は Mathematica のコードで，上の Maple コードの機能限定版です．
 - [*3d_model* ディレクトリ](3d_model/) には3Dプリンタで出力可能なモデルがあります.
 - [*paper_model* ディレクトリ](paper_model/) には折り紙の展開図があります.
-- [*hexagon* directory](hexagon/) にはカライドサイクルの仲間であるヘクサフレクサゴンの折り紙があります．また，カライドサイクルの折り方の説明図もあります．
+- [*hexagon* ディレクトリ](hexagon/) にはカライドサイクルの仲間であるヘクサフレクサゴンの折り紙があります．また，カライドサイクルの折り方の説明図もあります．
+- [Kaleidocycle.mw](Kaleidocycle.mw) は Maple のコードで，様々な条件下でカライドサイクルの形状や動きを計算し，可視化します．折り紙展開図の出力機能もあります．
+- [Kaleidocycle.nb](Kaleidocycle.nb) は Mathematica のコードで，上の Maple コードの機能限定版です．
 
 # 参考資料
 
@@ -33,12 +33,15 @@
 
 ## 和文解説
 メビウス・カライドサイクルについての和文解説は以下があります．
+* プレスリリース, [現代数学と折紙から生まれた新しい機構「メビウス・カライドサイクル」](https://www.kyushu-u.ac.jp/ja/researches/view/908)
 * 鍛冶静雄, [数理のクロスロード／かたちと動きの数理基盤／(1) リンク万華鏡](https://www.math.kyoto-u.ac.jp/~kaji/papers/susemi201906-linkage.pdf), 数学セミナー 2019年6月号, 日本評論社, 2019.
 * 鍛冶静雄, [かたちを算する／おもちゃのかたち](https://www.nippyo.co.jp/shop/magazine/8418.html), 数学セミナー 2021年1月号, 日本評論社, 2021.
 * 鍛冶静雄, [曲線の幾何学から生まれた閉リンク機構](https://www.math.kyoto-u.ac.jp/~kaji/papers/linkage.pdf), 2018年度精密工学会春季大会 シンポジウム資料集, pp. 62--65, 2018年3月1日.
 
 ## 論文や講演
 より学術的な記述は以下にあります．
+* 論文, Shizuo Kaji, Kenji Kajiwara, Shota Shigetomi
+[An explicit construction of Kaleidocycles](https://arxiv.org/abs/2308.04977)
 * 論文, Shizuo Kaji, Kenji Kajiwara, Hyeongki Park, 
 [Linkage Mechanisms Governed by Integrable Deformations of Discrete Space Curves](https://arxiv.org/abs/1903.06360), in Nonlinear Systems and Their Remarkable Mathematical Structures, Volume 2, pp 356--381, CRC Press, 2019
 * 講演スライド(日本語) [Kaleidocycle](https://www.math.kyoto-u.ac.jp/~kaji/papers/ShapeDesign.pdf), 13 Mar. 2021

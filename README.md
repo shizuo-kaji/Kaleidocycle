@@ -22,11 +22,14 @@ The shape is patented, but please feel free to use any of the material here for 
 * Shizuo Kaji, Johannes Schoenke, Eliot Fried, Michael Grunwald, [Moebius Kaleidocycle](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941), JP2018-033395(Japan), 2019JP007314(PCT), WO 2019167941(Publication Number), filed on 27 Feb. 2018.
 
 
-For details, please look at the [patent publication](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941) and the following materials (click the title to get the document):
+For details, please look at the following materials (click the title to get the document)
 * (presentation slides) [Geometry of Kaleidocycles](https://www.math.kyoto-u.ac.jp/~kaji/papers/Kaleidocycle21.pdf)
 presented at the Kyushu-Illinois Strategic Partnership Colloquia Series #2 Mathematics Without Borders - Applied and Applicable, 11 Mar. 2021
+* (preprint) Shizuo Kaji, Kenji Kajiwara, Shota Shigetomi,
+[An explicit construction of Kaleidocycles](https://arxiv.org/abs/2308.04977)
 * (paper) Shizuo Kaji, Kenji Kajiwara, Hyeongki Park, 
 [Linkage Mechanisms Governed by Integrable Deformations of Discrete Space Curves](https://arxiv.org/abs/1903.06360), in Nonlinear Systems and Their Remarkable Mathematical Structures, Volume 2, pp 356--381, CRC Press, 2019
+* [patent publication](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941)
 * (older conference abstract) Shizuo Kaji,  [A closed linkage mechanism having the shape of a discrete Mobius strip](https://arxiv.org/abs/1909.02885), the Symposium of the 2018 Spring meeting of the Japan Society for Precision Engineering, Tokyo, 17 Mar. 2018.
 * (older conference presentation) 
 Shizuo Kaji, Eliot Fried, Michael Grunwald, Johannes Schoenke, 
@@ -40,7 +43,6 @@ IMI Workshop Mathematics in Interface, Dislocation and Structure of Crystals, Ni
 Some of the results described above are also published in
 * Johannes Schoenke and Eliot Fried,
 [Single degree of freedom everting ring linkages with nonorientable topology](https://www.pnas.org/content/116/1/90.abstract), PNAS 116 (1), 90--95, 2019.
-
 
 # Gallery
 
