@@ -1,0 +1,230 @@
+Metadata-Version: 2.4
+Name: kaleidocycle
+Version: 0.0.0
+Summary: Modular Python toolkit for Kaleidocycle geometry, energies, and visualization.
+Author: Kaleidocycle Lab
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.26
+Requires-Dist: scipy>=1.11
+Requires-Dist: matplotlib>=3.8
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4; extra == "dev"
+Requires-Dist: ruff>=0.5.0; extra == "dev"
+Requires-Dist: hypothesis>=6.92; extra == "dev"
+Requires-Dist: jupyterlab>=4.2; extra == "dev"
+Requires-Dist: ipywidgets>=8.1; extra == "dev"
+
+# Kaleidocycle Python Port (WIP)
+
+This repository is transitioning Maple, Mathematica, and MATLAB tooling for kaleidocycles into a tested Python package plus notebooks.
+See `AGENTS.md` and `api.md` for the migration plan.
+
+N-Kaleidocycles are represented by a sequence of N+1 unit-length hinge vectors (binormals) in R^3 with **constant torsion** (constant inner product between adjacent hinges).
+For an oriented kaleidocycle, the first and last hinge are identical, while for a non-oriented one they are negatives of each other.
+(this is why we include N+1 hinges for an N-kaleidocycle; when considering geometric properties such as writhe and twist, this point is important).
+
+## Quick Start
+
+### Basic Usage with the Kaleidocycle Class
+
+The `Kaleidocycle` class provides a clean, object-oriented interface for working with kaleidocycles:
+
+```python
+from kaleidocycle import Kaleidocycle, ConstraintConfig, random_hinges, format_report, optimize_cycle
+initial_hinges = random_hinges(6, seed=123, oriented=True).as_array()
+config = ConstraintConfig(oriented=True, constant_torsion=True)
+result = optimize_cycle(
+    initial_hinges,
+    config,
+    objective="mean_cos",
+)
+kc_optimized = Kaleidocycle(hinges=result.hinges)
+kc_optimized.compute(config=config)
+kc.compute(config=config)
+report = format_report(kaleidocycle=kc)
+print(report)
+```
+
+**Key Features:**
+- **Flexible initialization**: From hinges, curve, tangents, or normals
+- **Lazy property computation**: Curve, tangents, and normals computed on-demand
+- **Comprehensive metadata**: Geometric, topological, energy, and constraint properties
+- **Integration**: Works seamlessly with optimization and visualization tools
+
+See `examples/kaleidocycle_usage.py` for comprehensive examples and `KALEIDOCYCLE_CLASS.md` for detailed documentation.
+
+### Interactive Notebooks
+
+Explore the capabilities of the package through interactive Jupyter notebooks in the `notebooks/` directory:
+
+## Project Structure
+
+- `src/kaleidocycle/` — geometry primitives, energy functionals, constraint helpers, and optimization wrappers
+  - `geometry.py` — core geometric functions (writhe, twist, curvature, frames) and **Kaleidocycle class**
+  - `animation.py` — sine-Gordon flow and animation utilities
+  - `theta.py` — exact analytic solutions via Jacobi theta functions
+  - `constraints.py` — constraint checking and validation
+  - `energies.py` — energy functionals
+  - `solvers.py` — optimization routines
+  - `report.py` — property report generation
+  - `visualization.py` — plotting utilities
+  - `io.py` — import/export functions
+- `tests/` — comprehensive test suites (124 tests, all passing)
+- `examples/` — example scripts demonstrating usage
+  - `kaleidocycle_usage.py` — comprehensive examples of the Kaleidocycle class
+- `notebooks/` — interactive Jupyter demonstrations
+- `AGENTS.md` — development guidelines, coding style, and build commands
+
+## Function Port Status
+
+This table tracks the migration of functions from legacy codebases (Maple/Mathematica/MATLAB) to Python.
+
+### Geometry & Frames
+
+| Original Function | Source | Python Function | Module | Tests | Status | Description |
+|-------------------|--------|-----------------|--------|-------|--------|-------------|
+| `B2T` | Maple | `binormals_to_tangents` | `geometry` | `test_pairwise_curvature_and_binormals_to_tangents_integration` | ✓ | Convert binormals to tangent vectors (with optional normalization) |
+| `B2K` | Maple | `pairwise_curvature` | `geometry` | `test_pairwise_curvature_*` (4 tests) | ✓ | Compute pairwise discrete curvature from binormals |
+| `X2T` | Maple | `curve_to_tangents` | `geometry` | `test_curve_to_tangents_*` (3 tests) | ✓ | Extract tangent vectors from curve points |
+| `normalize_hinges` | — | `normalize_hinges` | `geometry` | — | ✓ | Normalize hinge vectors to unit length |
+| `pairwise_cosines` | — | `pairwise_cosines` | `geometry` | — | ✓ | Compute dot products between consecutive hinges |
+| `mean_cosine` | — | `mean_cosine` | `geometry` | `test_mean_cosine_objective_decreases_cos` | ✓ | Average cosine of torsion angles |
+| `RndH` | Mathematica | `random_hinges` | `geometry` | — | ✓ | Generate random initial hinge configurations |
+| `B2X` | Maple | `tangents_to_curve` | `geometry` | — | ✓ | Convert tangent vectors to curve positions |
+| `XYZ` | Maple | `binormals_to_curve` | `geometry` | `test_binormals_to_curve_*` (4 tests) | ✓ | Generate 3D curve from binormals (practical approach) |
+| `XYZ` (analytic) | Maple | `generate_theta_curve` | `theta` | `test_generate_theta_curve_*` (3 tests) | ✓ | Exact analytic curve from Jacobi theta functions |
+| `Bx`, `By`, `Bz` | Mathematica | `eBx`, `eBy`, `eBz` | `theta` | (via `generate_theta_binormals`) | ✓ | Direct binormal computation from wave functions |
+| `close1`, `close2` | Mathematica | `close1`, `close2` | `theta` | (via solver tests) | ✓ | Closing conditions for kaleidocycles |
+| — | — | `solve_closure_conditions` | `theta` | (verified for N=6,8,9,13,38) | ✓ | Solve closing conditions to find (v,r,y) for given N |
+| `X2T` | Maple | `curve_to_tangents` | `geometry` | `test_curve_to_tangents_*` (3 tests) | ✓ | Extract tangent vectors from curve points |
+| `T2B` | Maple | `tangents_to_binormals` | `geometry` | `test_tangents_to_binormals_*` (2 tests) | ✓ | Convert tangents to binormals with sign handling |
+| `X2B` | Maple | `curve_to_binormals` | `geometry` | `test_curve_to_binormals_integration` | ✓ | Curve to binormals (X2T + T2B combined) |
+
+### Writhe & Topology
+
+| Original Function | Source | Python Function | Module | Tests | Status | Description |
+|-------------------|--------|-----------------|--------|-------|--------|-------------|
+| `lwrithe` | Maple | `lwrithe` | `geometry` | `test_lwrithe_*` (3 tests) | ✓ | Local writhe for 4-point segment (Levitt's formula) |
+| `Lwrithe` | Mathematica | `lwrithe` | `geometry` | `test_lwrithe_*` | ✓ | Same as Maple version |
+| `writhe` | Maple | `writhe` | `geometry` | `test_writhe_*` (3 tests) | ✓ | Global writhe of closed curve (Fuller's formula) |
+| `Writhe` | Mathematica | `writhe` | `geometry` | `test_writhe_*` | ✓ | Same as Maple version |
+| `localWrithe` | MATLAB | `lwrithe` | `geometry` | `test_lwrithe_*` | ✓ | MATLAB version of local writhe |
+| `axis` | Maple | `compute_axis` | `geometry` | `test_compute_axis_*` (4 tests) | ✓ | Compute rotation axis from binormals & curvature |
+| `Tw` | Maple | `total_twist` | `geometry` | `test_total_twist_*` (3 tests) | ✓ | Total twist from binormals normalized by π |
+| `TwX` | Maple | `total_twist_from_curve` | `geometry` | `test_total_twist_from_curve_*` (3 tests) | ✓ | Total twist from curve points |
+| `torsion` | Maple | `compute_torsion` | `geometry` | `test_compute_torsion_*` (3 tests) | ✓ | Torsion angles between consecutive binormals |
+
+### Energy Functionals
+
+| Original Function | Source | Python Function | Module | Tests | Status | Description |
+|-------------------|--------|-----------------|--------|-------|--------|-------------|
+| `elastic_energy` | Maple | `bending_energy` | `energies` | — | ✓ | Elastic bending energy (log form) |
+| `elastic_energy2` | Maple | `bending_energy` | `energies` | — | ⚠ | Squared-angle bending energy (via `order=2`) |
+| `torsion_energy` | Maple | `torsion_energy` | `energies` | — | ✓ | Torsional energy from binormals |
+| `Dipole` | Mathematica | `dipole_energy` | `energies` | — | ✓ | Long-range dipole interaction energy |
+| `dipole_energy` | Maple | `dipole_energy` | `energies` | — | ✓ | Same as Mathematica version |
+| `energy_dipole` | MATLAB | `dipole_energy` | `energies` | — | ✓ | MATLAB version of dipole energy |
+| `coulomb_energy` | Maple | — | — | — | ✗ | Coulomb potential between curve points |
+
+### Constraints & Validation
+
+| Original Function | Source | Python Function | Module | Tests | Status | Description |
+|-------------------|--------|-----------------|--------|-------|--------|-------------|
+| `feasible` | Maple | `constraint_residuals` | `constraints` | `test_constraint_residuals_small_for_sample` | ✓ | Check constraint satisfaction |
+| — | — | `constraint_penalty` | `constraints` | `test_penalty_solver_reduces_violation` | ✓ | Aggregate penalty from all constraints |
+| — | — | `unit_norm_residuals` | `constraints` | — | ✓ | Check hinge vectors are unit length |
+| — | — | `closure_residual` | `constraints` | — | ✓ | Check cycle closes properly |
+| — | — | `constant_torsion_residuals` | `constraints` | — | ✓ | Check constant torsion between hinges |
+| `fix_global` | Maple | `enforce_terminal` | `constraints` | — | ✓ | Fix global positioning/orientation |
+
+### Optimization & Solvers
+
+| Original Function | Source | Python Function | Module | Tests | Status | Description |
+|-------------------|--------|-----------------|--------|-------|--------|-------------|
+| `find` | Maple | `optimize_cycle` | `solvers` | `test_penalty_solver_reduces_violation` | ✓ | Main optimization dispatcher |
+| `MKn` | Mathematica | `optimize_cycle` | `solvers` | — | ✓ | Constrained minimization wrapper |
+| — | — | `OptimizationSummary` | `solvers` | — | ✓ | Result container with success status |
+| — | — | `SolverOptions` | `solvers` | — | ✓ | Solver configuration dataclass |
+| `newton` | Maple | `newton_solve` | `solvers` | `test_newton_solve_*` (8 tests) | ✓ | Newton iteration with adaptive step size |
+| `MPinv` | Maple | `moore_penrose_inverse` | `solvers` | `test_moore_penrose_inverse_*` (5 tests) | ✓ | Moore-Penrose pseudoinverse via SVD |
+
+### Visualization
+
+| Original Function | Source | Python Function | Module | Tests | Status | Description |
+|-------------------|--------|-----------------|--------|-------|--------|-------------|
+| `visTet` | Maple | `plot_band` | `visualization` | — | ✓ | Visualize tetrahedral band |
+| `visBand` | Maple | `plot_band` | `visualization` | — | ✓ | Plot kaleidocycle as connected band |
+| `Disp` | Mathematica | `plot_sample` | `visualization` | — | ✓ | Display complete kaleidocycle |
+| `dispCurve` | Maple | `plot_centreline` | `visualization` | — | ✓ | Plot center curve |
+| `dispBd` | Maple | `plot_hinges` | `visualization` | — | ✓ | Display hinge directions |
+| `coords` | Maple | `compute_tetrahedron_vertices` | `visualization` | — | ✓ | Compute 3D coordinates of tetrahedra |
+| — | — | `create_rotation_animation` | `visualization` | — | ✓ | Create animated rotation sequence |
+| — | — | `plot_energy_comparison` | `visualization` | — | ✓ | Compare energy values across configurations |
+| `disp_anim` | Maple | — | — | — | ✗ | Display animation sequence |
+
+### I/O & Data Management
+
+| Original Function | Source | Python Function | Module | Tests | Status | Description |
+|-------------------|--------|-----------------|--------|-------|--------|-------------|
+| — | — | `export_json` | `io` | `test_json_export_import` | ✓ | Export configuration to JSON |
+| — | — | `import_json` | `io` | `test_json_export_import` | ✓ | Import configuration from JSON |
+| — | — | `export_csv` | `io` | `test_csv_export_import` | ✓ | Export hinges to CSV |
+| — | — | `import_csv` | `io` | `test_csv_export_import` | ✓ | Import hinges from CSV |
+| `anim_load` | Maple | `import_csv` | `io` | — | ⚠ | Load animation frames (partial support) |
+
+### Animation & Evolution
+
+| Original Function | Source | Python Function | Module | Tests | Status | Description |
+|-------------------|--------|-----------------|--------|-------|--------|-------------|
+| `B2N` | Maple | `binormals_to_normals` | `animation` | `test_binormals_to_normals_*` (2 tests) | ✓ | Compute normal vectors from binormals and tangents |
+| `K2omega` | Maple | `curvature_to_omega` | `animation` | `test_curvature_to_omega_*` (2 tests) | ✓ | Convert curvature to auxiliary omega angles |
+| `sGmoveB` | Maple | `sine_gordon_step` | `animation` | `test_sine_gordon_step_*` (4 tests) | ✓ | Single RK4 step of sine-Gordon evolution |
+| `anim_dd` | Maple | `generate_animation` | `animation` | `test_generate_animation_*` (3 tests) | ✓ | Generate animation by sine-Gordon flow |
+| `clean_anim` | Maple | `clean_animation_frames` | `animation` | `test_clean_animation_frames_*` (4 tests) | ✓ | Filter infeasible frames from animation |
+| `fix_rot` | Maple | `align_animation_frames` | `animation` | `test_align_animation_frames_*` (4 tests) | ✓ | Align frames using Procrustes analysis |
+| `diffB` | Maple | — | — | — | ⚠ | Internal helper (part of sine_gordon_step) |
+| `anim_step` | Maple | `generate_animation_step` | `animation` | `test_generate_animation_step_*` (3 tests) | ✓ | Uniform-step animation through config space |
+| `anim_rnd` | Maple | `generate_animation_random` | `animation` | `test_generate_animation_random_*` (5 tests) | ✓ | Random search animation (includes sorting) |
+| `anim_ddX` | Maple | — | — | — | ✗ | Sine-Gordon on curve coordinates |
+| `sort_anim` | Maple | `sort_animation_frames` | `animation` | `test_sort_animation_frames_*` (5 tests) | ✓ | Sort animation frames by spatial proximity |
+| `XYZ(anim)` | Maple | `generate_curve_animation` | `animation` | `test_generate_curve_animation_*` (6 tests) | ✓ | Convert binormal animation to curve animation |
+
+### Core Classes
+
+| Class | Module | Status | Description |
+|-------|--------|--------|-------------|
+| `Kaleidocycle` | `geometry` | ✓ | Object-oriented container for kaleidocycle data with flexible initialization (hinges, curve, tangents) and comprehensive property computation (geometric, topological, energies, constraints) |
+| `HingeFrame` | `geometry` | ✓ | Simple container for normalized hinge vectors |
+| `ConstraintConfig` | `constraints` | ✓ | Configuration dataclass for constraint settings |
+| `SolverOptions` | `solvers` | ✓ | Solver configuration dataclass |
+| `OptimizationSummary` | `solvers` | ✓ | Result container with success status and diagnostics |
+
+### Status Legend
+- **✓** Fully ported with tests
+- **⚠** Partially implemented or needs additional features
+- **✗** Not yet ported
+
+**Test Coverage:**
+- Geometry: 29 tests in `test_geometry.py` ✓
+- Animation: 33 tests in `test_animation.py` ✓ (includes 5 tests for `sort_animation_frames`)
+- Curve generation: 10 tests in `test_curve_generation.py` ✓
+- Newton: 13 tests in `test_newton.py` ✓
+- Theta functions: 17 tests in `test_theta.py` ✓
+- Constraints: 4 tests in `test_constraints.py` ✓ (includes validation of constant torsion)
+- IO: 7 tests in `test_io.py` ✓
+- Visualization: 11 tests in `test_visualization.py` ✓
+- **Total: 124 tests, all passing** ✓
+
+**Important Note on Test Fixtures:**
+All tests now use properly optimized kaleidocycles with **constant torsion** (constant inner product between adjacent hinges), which is the fundamental defining property of kaleidocycles. Test fixtures verify:
+- Constant torsion: std < 1e-4
+- Unit norm: ||residual|| < 1e-4
+- Closure: ||residual|| < 2e-3
+
+## Next Steps
+
+- Port curvature recursion formulas (`curvature_recursion`, `curvature_recursion_T`)
+- Port remaining angle transformation functions (`omega2K`, `K2theta`, `theta2K`)
+- Implement remaining animation functions (`anim_ddX`)
+- Package the Python module for distribution once APIs stabilise, adding CI to run lint/tests/notebooks.

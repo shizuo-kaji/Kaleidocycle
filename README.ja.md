@@ -1,4 +1,4 @@
-[English](README.md) | [日本語](README.ja.md) 
+[English](README.md) | [日本語](README.ja.md)
 
 カライドサイクルの設計と動きの解析
 ==================
@@ -10,15 +10,22 @@
 ここでは，メビウス・カライドサイクルの設計や動きを計算するためのコンピュータ・コードや，
 折り紙で作成するための展開図，3Dプリンタで出力するためのモデルファイルを公開しています．
 
-この研究はJSTさきがけ(JPMJPR16E3)の支援を受けて行われました．
-
-# ファイル
-
-- [*3d_model* ディレクトリ](3d_model/) には3Dプリンタで出力可能なモデルがあります.
-- [*paper_model* ディレクトリ](paper_model/) には折り紙の展開図があります.
-- [*hexagon* ディレクトリ](hexagon/) にはカライドサイクルの仲間であるヘクサフレクサゴンの折り紙があります．また，カライドサイクルの折り方の説明図もあります．
+# リポジトリ構成
+- [`3d_model/`](3d_model/) には3Dプリンタで出力可能なモデルがあります.
+- [`paper_model/`](paper_model/) には折り紙の展開図があります.
+- [`hexagon/`](hexagon/) にはカライドサイクルの仲間であるヘクサフレクサゴンの折り紙があります．また，カライドサイクルの折り方の説明図もあります．
+- [`python/`](python/) — Python による実装（`src/kaleidocycle/` 配下のライブラリ，ノートブック，サンプル）
 - [Kaleidocycle.mw](Kaleidocycle.mw) は Maple のコードで，様々な条件下でカライドサイクルの形状や動きを計算し，可視化します．折り紙展開図の出力機能もあります．
 - [Kaleidocycle.nb](Kaleidocycle.nb) は Mathematica のコードで，上の Maple コードの機能限定版です．
+
+## Python
+1. `cd python`
+2. `uv venv .venv && source .venv/bin/activate`
+3. `pip install -e .[dev]`
+4. `pytest` あるいは `pytest -k geometry` でテストを実行
+5. `jupyter lab notebooks/Exploration.ipynb` を開き対話的に探索
+
+詳細は `python/README.md`を参照してください。
 
 # 参考資料
 
@@ -37,16 +44,17 @@
 * 鍛冶静雄, [数理のクロスロード／かたちと動きの数理基盤／(1) リンク万華鏡](https://www.math.kyoto-u.ac.jp/~kaji/papers/susemi201906-linkage.pdf), 数学セミナー 2019年6月号, 日本評論社, 2019.
 * 鍛冶静雄, [かたちを算する／おもちゃのかたち](https://www.nippyo.co.jp/shop/magazine/8418.html), 数学セミナー 2021年1月号, 日本評論社, 2021.
 * 鍛冶静雄, [曲線の幾何学から生まれた閉リンク機構](https://www.math.kyoto-u.ac.jp/~kaji/papers/linkage.pdf), 2018年度精密工学会春季大会 シンポジウム資料集, pp. 62--65, 2018年3月1日.
+* 鍛冶静雄,[ユークリッド空間への図形の配置と設計への応用](https://drive.google.com/file/d/1T9TYKBqkQ1LdtojkK5dp09Pkyl5XI_wF/view?usp=sharing)
 
 ## 論文や講演
 より学術的な記述は以下にあります．
 * 論文, Shizuo Kaji, Kenji Kajiwara, Shota Shigetomi
 [An explicit construction of Kaleidocycles](https://arxiv.org/abs/2308.04977)
-* 論文, Shizuo Kaji, Kenji Kajiwara, Hyeongki Park, 
+* 論文, Shizuo Kaji, Kenji Kajiwara, Hyeongki Park,
 [Linkage Mechanisms Governed by Integrable Deformations of Discrete Space Curves](https://arxiv.org/abs/1903.06360), in Nonlinear Systems and Their Remarkable Mathematical Structures, Volume 2, pp 356--381, CRC Press, 2019
 * 講演スライド(日本語) [Kaleidocycle](https://www.math.kyoto-u.ac.jp/~kaji/papers/ShapeDesign.pdf), 13 Mar. 2021
 * 講演スライド(英語) [Geometry of Kaleidocycles](https://www.math.kyoto-u.ac.jp/~kaji/papers/Kaleidocycle21.pdf), presented at the Kyushu-Illinois Strategic Partnership Colloquia Series #2 Mathematics Without Borders - Applied and Applicable, 11 Mar. 2021
-* 古い講演資料 Shizuo Kaji, Eliot Fried, Michael Grunwald, Johannes Schoenke, 
+* 古い講演資料 Shizuo Kaji, Eliot Fried, Michael Grunwald, Johannes Schoenke,
 [Geometry of closed kinematic chain](https://www.math.kyoto-u.ac.jp/~kaji/files/Kaleidocycle17.pdf),
 IMI Workshop Mathematics in Interface, Dislocation and Structure of Crystals, Nishijin plaza, Fukuoka, 29 Aug. 2017
 
@@ -54,7 +62,8 @@ IMI Workshop Mathematics in Interface, Dislocation and Structure of Crystals, Ni
 * Johannes Schoenke and Eliot Fried,
 [Single degree of freedom everting ring linkages with nonorientable topology](https://www.pnas.org/content/116/1/90.abstract), PNAS 116 (1), 90--95, 2019.
 
-# ギャラリー
+
+## ギャラリー
 
 ![K9](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/K9.gif?raw=true)
 ![K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/k8_t.gif?raw=true)
@@ -66,4 +75,6 @@ IMI Workshop Mathematics in Interface, Dislocation and Structure of Crystals, Ni
 <img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/straw-K8.jpg?raw=true" width="30%" />
 <img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/K12_print.jpg?raw=true" width="30%" />
 
-
+## ライセンス
+リポジトリ内のコードとデータは MIT License ([`LICENSE`](LICENSE)) の下で公開されています。
+学術利用の際は上記文献の引用をご検討ください。

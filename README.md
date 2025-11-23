@@ -1,50 +1,96 @@
-[English](README.md) | [日本語](README.ja.md) 
+[English](README.md) | [日本語](README.ja.md)
 
-Geometry of the moduli space of a closed linkage
-==================
-By Shizuo KAJI
+# Kaleidocycle: Geometry of Closed Linkages
 
-This work was supported by Japan Science and Technology Agency (JST) PRESTO Grant Number JPMJPR16E3, Japan.
+Kaleidocycles are closed linkage mechanisms shaped like discrete Möbius bands.
+Each unit consists of tetrahedral links that flip inside-out by rotating around
+hinged joints, producing everting motions reminiscent of bubble rings. This
+repository gathers asset needed to model, simulate, and fabricate these
+mechanisms: Python tooling, Maple/Mathematica notebooks,
+paper templates, and 3D-printable parts.
 
-# Files
+## Repository Tour
+- [`python/`](python/) — Python scripts (package sources under
+  `src/kaleidocycle/`, notebooks, examples, and 120+ unit tests)
+- [`Kaleidocycle.mw`](Kaleidocycle.mw) / [`Kaleidocycle.nb`](Kaleidocycle.nb) —
+  Maple and Mathematica scripts for symbolic construction, visualization, and
+  template export
+- [`3d_model/`](3d_model/) — STL and reference renders for 3D printing
+  (models by [Kamagata Design Studio](https://kdstudio.jp/))
+- [`paper_model/`](paper_model/) — printable templates for hand-folded models
+- [`hexagon/`](hexagon/) — hexaflexagon cousin plus a pictorial folding guide
+  for kaleidocycles
+- [`LICENSE`](LICENSE) — MIT license for the code (see the patent note below)
 
-- [Kaleidocycle.mw](Kaleidocycle.mw) is the main Maple script that computes the shape and motion of Kaleidocycles satisfying various conditions.
-It has some visualisation features including creating animation and plans of paper models.
-- [Kaleidocycle.nb](Kaleidocycle.nb) is a similar script in Mathematica but comes with less functionality.
-- [*3d_model* directory](3d_model/) contains 3D printable models.
-They are modelled by [Kamagata Design Studio](https://kdstudio.jp/)
-- [*paper_model* directory](paper_model/) contains paper models foldable by hand.
-- [*hexagon* directory](hexagon/) contains a paper model of the hexaflexagon, a two-dimensional cousin of Kaleidocycle.
+## Quick Start
+### Python toolkit
+1. `cd python`
+2. `uv venv .venv && source .venv/bin/activate`
+3. `pip install -e .[dev]`
+4. `pytest` (or `pytest -k geometry`) to run the suite
+5. `jupyter lab notebooks/FindKaleidocycles.ipynb` for interactive exploration
 
-# References
+### Maple / Mathematica workflows
+Open `Kaleidocycle.mw` (Maple) or `Kaleidocycle.nb` (Mathematica) to reproduce
+symbolic computations. Both scripts include visualization helpers
+and export functions for paper templates and motion studies.
 
-The shape is patented, but please feel free to use any of the material here for personal use.
-* Shizuo Kaji, Johannes Schoenke, Eliot Fried, Michael Grunwald, [Moebius Kaleidocycle](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941), JP2018-033395(Japan), 2019JP007314(PCT), WO 2019167941(Publication Number), filed on 27 Feb. 2018.
+### Physical model assets
+- Print STL files from `3d_model/` to fabricate rigid kaleidocycles
+- Use `paper_model/` templates for hand-folded prototypes; the `hexagon/` folder
+  also contains instructions
 
+## References & Further Reading
+### Technical publications
+- Shizuo Kaji, Kenji Kajiwara, Shota Shigetomi,
+  [*An explicit construction of Kaleidocycles*](https://arxiv.org/abs/2308.04977)
+- Shizuo Kaji, Kenji Kajiwara, Hyeongki Park,
+  [*Linkage Mechanisms Governed by Integrable Deformations of Discrete Space Curves*](https://arxiv.org/abs/1903.06360),
+  in *Nonlinear Systems and Their Remarkable Mathematical Structures*, Vol. 2,
+  CRC Press, 2019
 
-For details, please look at the following materials (click the title to get the document)
-* (presentation slides) [Geometry of Kaleidocycles](https://www.math.kyoto-u.ac.jp/~kaji/papers/Kaleidocycle21.pdf)
-presented at the Kyushu-Illinois Strategic Partnership Colloquia Series #2 Mathematics Without Borders - Applied and Applicable, 11 Mar. 2021
-* (preprint) Shizuo Kaji, Kenji Kajiwara, Shota Shigetomi,
-[An explicit construction of Kaleidocycles](https://arxiv.org/abs/2308.04977)
-* (paper) Shizuo Kaji, Kenji Kajiwara, Hyeongki Park, 
-[Linkage Mechanisms Governed by Integrable Deformations of Discrete Space Curves](https://arxiv.org/abs/1903.06360), in Nonlinear Systems and Their Remarkable Mathematical Structures, Volume 2, pp 356--381, CRC Press, 2019
-* [patent publication](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941)
-* (older conference abstract) Shizuo Kaji,  [A closed linkage mechanism having the shape of a discrete Mobius strip](https://arxiv.org/abs/1909.02885), the Symposium of the 2018 Spring meeting of the Japan Society for Precision Engineering, Tokyo, 17 Mar. 2018.
-* (older conference presentation) 
-Shizuo Kaji, Eliot Fried, Michael Grunwald, Johannes Schoenke, 
-[Geometry of closed kinematic chain](https://www.math.kyoto-u.ac.jp/~kaji/files/Kaleidocycle17.pdf),
-IMI Workshop Mathematics in Interface, Dislocation and Structure of Crystals, Nishijin plaza, Fukuoka, 29 Aug. 2017
-* (in Japanese) 鍛冶静雄, [曲線の幾何学から生まれた閉リンク機構](https://www.math.kyoto-u.ac.jp/~kaji/papers/linkage.pdf), 2018年度精密工学会春季大会 シンポジウム資料集, pp. 62--65.
-* (in Japanese) 鍛冶静雄, [数理のクロスロード／かたちと動きの数理基盤／(1) リンク万華鏡](https://www.math.kyoto-u.ac.jp/~kaji/papers/susemi201906-linkage.pdf), 数学セミナー 2019年6月号, 日本評論社, 2019.
-* (in Japanese) 鍛冶静雄, [かたちを算する／おもちゃのかたち](https://www.nippyo.co.jp/shop/magazine/8418.html), 数学セミナー 2021年1月号, 日本評論社, 2021.
-* (presentation slides in Japanese) [Kaleidocycle](https://www.math.kyoto-u.ac.jp/~kaji/papers/ShapeDesign.pdf), 13 Mar. 2021
+### Talks, slides, and abstracts
+- (slides) [*Geometry of Kaleidocycles*](https://www.math.kyoto-u.ac.jp/~kaji/papers/Kaleidocycle21.pdf),
+  Kyushu-Illinois Strategic Partnership Colloquia Series #2, 11 Mar 2021
+- (slides, Japanese) [*Kaleidocycle*](https://www.math.kyoto-u.ac.jp/~kaji/papers/ShapeDesign.pdf),
+  13 Mar 2021
+- Shizuo Kaji,
+  [*A closed linkage mechanism having the shape of a discrete Möbius strip*](https://arxiv.org/abs/1909.02885),
+  JSPE Spring Meeting Symposium, 17 Mar 2018
+- Shizuo Kaji, Eliot Fried, Michael Grunwald, Johannes Schoenke,
+  [*Geometry of closed kinematic chain*](https://www.math.kyoto-u.ac.jp/~kaji/files/Kaleidocycle17.pdf),
+  IMI Workshop on Mathematics in Interface, Dislocation and Structure of
+  Crystals, 29 Aug 2017
+
+### Japanese-language articles
+- プレスリリース:
+  [現代数学と折紙から生まれた新しい機構「メビウス・カライドサイクル」](https://www.kyushu-u.ac.jp/ja/researches/view/908)
+- 鍛冶静雄,
+  [ユークリッド空間への図形の配置と設計への応用](https://drive.google.com/file/d/1T9TYKBqkQ1LdtojkK5dp09Pkyl5XI_wF/view?usp=sharing)
+- 鍛冶静雄,
+  [曲線の幾何学から生まれた閉リンク機構](https://www.math.kyoto-u.ac.jp/~kaji/papers/linkage.pdf),
+  2018年度精密工学会春季大会 シンポジウム資料集, pp. 62–65
+- 鍛冶静雄,
+  [数理のクロスロード／かたちと動きの数理基盤／(1) リンク万華鏡](https://www.math.kyoto-u.ac.jp/~kaji/papers/susemi201906-linkage.pdf),
+  数学セミナー 2019年6月号, 日本評論社
+- 鍛冶静雄,
+  [かたちを算する／おもちゃのかたち](https://www.nippyo.co.jp/shop/magazine/8418.html),
+  数学セミナー 2021年1月号, 日本評論社
+
+## Patent
+The specific shape of the Möbius kaleidocycle is covered by the patent
+* Shizuo Kaji, Johannes Schoenke, Eliot Fried, Michael Grunwald,
+  [*Moebius Kaleidocycle*](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941),
+  JP2018-033395 (Japan), 2019JP007314 (PCT), WO 2019167941, filed 27 Feb 2018.
+However, feel free to use the material here for personal and educational projects.
 
 Some of the results described above are also published in
-* Johannes Schoenke and Eliot Fried,
-[Single degree of freedom everting ring linkages with nonorientable topology](https://www.pnas.org/content/116/1/90.abstract), PNAS 116 (1), 90--95, 2019.
+- Johannes Schoenke and Eliot Fried,
+  [*Single degree of freedom everting ring linkages with nonorientable topology*](https://www.pnas.org/content/116/1/90.abstract),
+  *PNAS* 116 (1), 90–95, 2019
 
-# Gallery
+
+## Gallery
 
 ![K9](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/K9.gif?raw=true)
 ![K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/k8_t.gif?raw=true)
@@ -56,3 +102,7 @@ Some of the results described above are also published in
 <img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/straw-K8.jpg?raw=true" width="30%" />
 <img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/K12_print.jpg?raw=true" width="30%" />
 
+## License
+All code and assets in this repository are released under the MIT License (see
+[`LICENSE`](LICENSE)). Cite the references above when using or extending the
+material in academic work.
