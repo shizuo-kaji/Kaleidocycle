@@ -70,12 +70,13 @@ class KaleidocycleAnimation:
 
     Add properties:
     >>> anim.compute_vertex_property("curvature")
-    >>> anim.compute_scalar_property("energy", energy_func)
+    >>> anim.compute_scalar_property("bending_energy")
+    >>> anim.compute_scalar_property("mean_torsion")
 
     Access frames and properties:
     >>> frame_10 = anim.frames[10]
     >>> curvatures = anim.vertex_properties["curvature"]  # shape (n_frames, n_vertices)
-    >>> energies = anim.scalar_properties["energy"]  # shape (n_frames,)
+    >>> energies = anim.scalar_properties["bending_energy"]  # shape (n_frames,)
 
     Visualize:
     >>> from kaleidocycle import plot_vertex_values
@@ -217,6 +218,124 @@ class KaleidocycleAnimation:
         """Shape of each frame (n_vertices, 3)."""
         return self.frames[0].shape
 
+    @property
+    def n(self) -> int:
+        """Number of tetrahedra in the kaleidocycle.
+
+        This is n_vertices - 1 since hinges array includes the closing hinge.
+        """
+        return self.n_vertices - 1
+
+    @property
+    def oriented(self) -> bool:
+        """Check if the kaleidocycle is oriented.
+
+        A kaleidocycle is oriented if the first and last hinge vectors
+        in each frame point in the same direction (dot product close to 1).
+
+        Returns
+        -------
+        bool
+            True if oriented, False otherwise
+        """
+        # Check first frame to determine orientation
+        first_frame = self.frames[0]
+        first_hinge = first_frame[0] / np.linalg.norm(first_frame[0])
+        last_hinge = first_frame[-1] / np.linalg.norm(first_frame[-1])
+        cosine = np.clip(np.dot(first_hinge, last_hinge), -1.0, 1.0)
+        return bool(cosine > 0.9999)  # Threshold for "approximately equal"
+
+    @property
+    def is_closed(self) -> bool:
+        """Check if all frames satisfy the closure constraint.
+
+        Checks if closure_residual (sum of tangents) is small for all frames.
+        The closure constraint ensures that the tangent vectors sum to zero,
+        forming a closed spatial polygon.
+
+        Returns
+        -------
+        bool
+            True if all frames satisfy closure constraint, False otherwise
+        """
+        from .constraints import closure_residual
+
+        tolerance = 1e-3  # Tolerance for closure residual norm
+
+        for frame in self.frames:
+            residual = closure_residual(frame, slide=0.0)
+            if np.linalg.norm(residual) > tolerance:
+                return False
+
+        return True
+
+    @property
+    def is_aligned(self) -> bool:
+        """Check if all frames satisfy the alignment constraint.
+
+        Checks if alignment_residuals (first and last hinge matching) is small
+        for all frames. For oriented kaleidocycles, first and last hinges should
+        be equal. For non-oriented, they should be opposite.
+
+        Returns
+        -------
+        bool
+            True if all frames satisfy alignment constraint, False otherwise
+        """
+        from .constraints import alignment_residuals
+
+        tolerance = 1e-3  # Tolerance for alignment residual norm
+        oriented = self.oriented
+
+        for frame in self.frames:
+            residual = alignment_residuals(frame, oriented=oriented)
+            if residual > tolerance:
+                return False
+
+        return True
+
+    @property
+    def is_unit_norm(self) -> bool:
+        """Check if all hinges have unit norm.
+
+        Returns
+        -------
+        bool
+            True if all hinges have norm approximately equal to 1, False otherwise
+        """
+        tolerance = 1e-6
+
+        for frame in self.frames:
+            norms = np.linalg.norm(frame, axis=1)
+            if not np.allclose(norms, 1.0, rtol=tolerance, atol=tolerance):
+                return False
+
+        return True
+
+    @property
+    def constant_torsion(self) -> float | None:
+        """Constant torsion value if torsion is constant, None otherwise.
+
+        Computes the torsion for the first frame and checks if it's constant
+        (all torsion values are approximately equal). If constant, returns
+        the average torsion value; otherwise returns None.
+
+        Returns
+        -------
+        float | None
+            Constant torsion value if torsion is constant, None otherwise
+        """
+        # Check first frame's torsion
+        first_frame = self.frames[0]
+        torsion = compute_torsion(first_frame)
+
+        # Check if all torsion values are approximately equal
+        tolerance = 1e-4
+        if np.std(torsion) < tolerance:
+            return float(np.mean(torsion))
+        else:
+            return None
+
     def add_vertex_property(
         self,
         name: str,
@@ -335,7 +454,12 @@ class KaleidocycleAnimation:
         Parameters
         ----------
         property_name : str
-            Property name for storage
+            Property name for storage. Built-in options:
+            - "bending_energy" or "bending": Bobenko-Suris bending energy
+            - "mean_torsion": Mean torsion angle across hinges
+            - "mean_curvature": Mean curvature across hinges
+            - "penalty": Constraint penalty (requires config in metadata)
+            - "linking_number": Topological linking number
         func : callable
             Function that takes hinges array and returns a scalar
             If None, uses built-in property computation
@@ -346,25 +470,59 @@ class KaleidocycleAnimation:
         -------
         values : NDArray[np.float64]
             Computed property values, shape (n_frames,)
+
+        Examples
+        --------
+        Compute bending energy evolution:
+        >>> anim.compute_scalar_property("bending_energy")
+        >>> energies = anim.scalar_properties["bending_energy"]
+
+        Compute mean curvature over time:
+        >>> anim.compute_scalar_property("mean_curvature")
+        >>> mean_curv = anim.scalar_properties["mean_curvature"]
         """
         if property_name in self.scalar_properties and not overwrite:
             return self.scalar_properties[property_name]
 
         if func is None:
             # Try to compute built-in properties
-            if property_name == "penalty":
+            if property_name in ["bending_energy", "bending"]:
+                from .energies import bending_energy
+
+                def func(h):
+                    tangents = binormals_to_tangents(h, normalize=False)
+                    return bending_energy(tangents)
+
+            elif property_name == "mean_torsion":
+
+                def func(h):
+                    torsion = compute_torsion(h)
+                    return float(np.mean(torsion))
+
+            elif property_name == "mean_curvature":
+
+                def func(h):
+                    tangents = binormals_to_tangents(h, normalize=True)
+                    curvature = pairwise_curvature(h, tangents)
+                    return float(np.mean(curvature))
+
+            elif property_name == "penalty":
                 from .constraints import ConstraintConfig
 
-                config = ConstraintConfig()
+                config = ConstraintConfig(oriented=self.oriented)
                 func = lambda h: constraint_penalty(h, config)
+
             elif property_name == "linking_number":
                 from .solvers import compute_linking_number
 
                 func = compute_linking_number
+
             else:
                 raise ValueError(
                     f"no built-in computation for '{property_name}', "
-                    f"please provide func argument"
+                    f"please provide func argument. "
+                    f"Built-in options: 'bending_energy', 'bending', "
+                    f"'mean_torsion', 'mean_curvature', 'penalty', 'linking_number'"
                 )
 
         values = np.array([func(frame) for frame in self.frames])
@@ -518,9 +676,9 @@ def curvature_to_omega(
     oriented: bool = True,
     mkdv: bool = False,
 ) -> NDArray[np.float64]:
-    """Convert curvature angles to auxiliary omega angles.
+    """Convert curvature angles to auxiliary omega potential.
 
-    The omega angles are used in sine-Gordon and mKdV evolution equations.
+    The omega potentials are used in sine-Gordon and mKdV evolution equations.
     For non-oriented kaleidocycles and sine-Gordon flow, uses a simplified
     formula based on cumulative sums.
 
@@ -530,7 +688,7 @@ def curvature_to_omega(
         mkdv: If True, use mKdV formulation; otherwise sine-Gordon
 
     Returns:
-        Array of omega angles, shape (n+1,) for compatibility with binormals
+        Array of omega potentials, shape (n+1,) for compatibility with binormals
 
     References:
         Corresponds to K2omega function in Maple code (line 383)
@@ -568,9 +726,32 @@ def curvature_to_omega(
         return phi
 
     else:
-        # mKdV formulation: -phi[i-1] - phi[i] = K[i]
-        # Not fully implemented - return simple approximation
-        phi = -np.cumsum(K) / 2
+        # mKdV formulation: solve linear system -phi[i-1] - phi[i] = K[i]
+        # Build linear system A phi = b for phi[0..n-1]
+        s = 1 if oriented else -1
+        n = K.shape[0]
+
+        # Construct A matrix
+        A = np.zeros((n, n))
+        # Equations for i = 0..n-2: phi[i] + phi[i+1] = -K[i+1]
+        for i in range(n - 1):
+            A[i, i] = 1.0
+            A[i, i + 1] = 1.0
+        # Boundary equation: phi[0] + s * phi[n-1] = -K[0]
+        A[n - 1, 0] = 1.0
+        A[n - 1, n - 1] = float(s)
+
+        b = -np.concatenate([K[1:], np.array([K[0]])])
+
+        # Solve linear system (use least-squares fallback if singular)
+        try:
+            phi = np.linalg.solve(A, b)
+        except np.linalg.LinAlgError:
+            phi, *_ = np.linalg.lstsq(A, b, rcond=None)
+            phi = phi.astype(float)
+
+        # Return phi with wraparound element for compatibility (length n+1)
+        # Follow previous branch conventions: append phi[0] for oriented, -phi[0] otherwise
         return np.append(phi, phi[0] if oriented else -phi[0])
 
 
@@ -976,7 +1157,7 @@ def generate_animation_step(
 
             # Distance penalty (soft constraint to maintain target distance)
             dist = np.linalg.norm(B - reference_frame)
-            distance_penalty = 100.0 * (dist - target_distance) ** 2
+            distance_penalty = (dist - target_distance) ** 2
 
             return penalty + distance_penalty
 

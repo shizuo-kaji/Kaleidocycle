@@ -608,6 +608,10 @@ def test_report_contains_expected_sections() -> None:
     assert "Constraint Violations" in report
     assert "Energy" in report
 
+    # Check for curvature recursion statistics
+    assert "Mean curvature recursion:" in report
+    assert "Std dev curvature recursion:" in report
+
 
 def test_report_with_custom_config() -> None:
     """Test report with custom constraint configuration."""

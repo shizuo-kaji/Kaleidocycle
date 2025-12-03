@@ -1,0 +1,7 @@
+*.o
+*.d
+cubicalripser
+tcubicalripser
+__pycache__/
+*.pyc
+*.pyo

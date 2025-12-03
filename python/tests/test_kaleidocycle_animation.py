@@ -230,6 +230,47 @@ def test_compute_scalar_property_linking_number():
     assert lks.shape == (5,)
 
 
+def test_compute_scalar_property_bending_energy():
+    """Test computing built-in bending energy property."""
+    frames = [random_hinges(6, seed=i).as_array() for i in range(5)]
+    anim = KaleidocycleAnimation(frames=frames)
+
+    energies = anim.compute_scalar_property("bending_energy")
+
+    assert "bending_energy" in anim.scalar_properties
+    assert energies.shape == (5,)
+    assert np.all(energies >= 0)  # Energy should be non-negative
+
+    # Test alias
+    energies2 = anim.compute_scalar_property("bending", overwrite=True)
+    assert "bending" in anim.scalar_properties
+    assert energies2.shape == (5,)
+
+
+def test_compute_scalar_property_mean_torsion():
+    """Test computing built-in mean torsion property."""
+    frames = [random_hinges(6, seed=i).as_array() for i in range(5)]
+    anim = KaleidocycleAnimation(frames=frames)
+
+    mean_torsions = anim.compute_scalar_property("mean_torsion")
+
+    assert "mean_torsion" in anim.scalar_properties
+    assert mean_torsions.shape == (5,)
+    assert np.all(mean_torsions >= 0)  # Torsion angles are non-negative
+
+
+def test_compute_scalar_property_mean_curvature():
+    """Test computing built-in mean curvature property."""
+    frames = [random_hinges(6, seed=i).as_array() for i in range(5)]
+    anim = KaleidocycleAnimation(frames=frames)
+
+    mean_curvatures = anim.compute_scalar_property("mean_curvature")
+
+    assert "mean_curvature" in anim.scalar_properties
+    assert mean_curvatures.shape == (5,)
+    # Mean curvature can be positive or negative (signed angles)
+
+
 def test_compute_scalar_property_invalid_builtin():
     """Test that invalid built-in property name raises error."""
     frames = [random_hinges(6, seed=i).as_array() for i in range(5)]
@@ -384,3 +425,102 @@ def test_integration_with_generate_animation():
 
     assert "curvature" in anim.vertex_properties
     assert "penalty" in anim.scalar_properties
+
+
+def test_n_property():
+    """Test n property (number of tetrahedra)."""
+    frames = [random_hinges(6, seed=i).as_array() for i in range(5)]
+    anim = KaleidocycleAnimation(frames=frames)
+
+    assert anim.n == 6
+    assert anim.n == anim.n_vertices - 1
+
+
+def test_oriented_property():
+    """Test oriented property."""
+    # Create oriented kaleidocycle
+    frames_oriented = [random_hinges(6, seed=i, oriented=True).as_array() for i in range(5)]
+    anim_oriented = KaleidocycleAnimation(frames=frames_oriented)
+
+    # Create non-oriented kaleidocycle
+    frames_non_oriented = [random_hinges(6, seed=i, oriented=False).as_array() for i in range(5)]
+    anim_non_oriented = KaleidocycleAnimation(frames=frames_non_oriented)
+
+    assert anim_oriented.oriented is True
+    assert anim_non_oriented.oriented is False
+
+
+def test_is_closed_property():
+    """Test is_closed property."""
+    # Create animation from optimized kaleidocycles (should satisfy closure)
+    from kaleidocycle import Kaleidocycle
+
+    frames_closed = [Kaleidocycle(6, seed=i).hinges for i in range(5)]
+    anim_closed = KaleidocycleAnimation(frames=frames_closed)
+
+    # Optimized kaleidocycles should satisfy closure constraint
+    assert anim_closed.is_closed is True
+
+    # Create animation from random hinges (likely won't satisfy closure)
+    frames_random = [random_hinges(6, seed=i).as_array() for i in range(3)]
+    anim_random = KaleidocycleAnimation(frames=frames_random)
+
+    # Random hinges typically don't satisfy closure constraint
+    # Just check that the property returns a boolean
+    result = anim_random.is_closed
+    assert isinstance(result, bool)
+
+
+def test_is_aligned_property():
+    """Test is_aligned property."""
+    # Create animation from optimized kaleidocycles (should satisfy alignment)
+    from kaleidocycle import Kaleidocycle
+
+    # Oriented kaleidocycles should satisfy alignment constraint
+    frames_oriented = [Kaleidocycle(6, oriented=True, seed=i).hinges for i in range(3)]
+    anim_oriented = KaleidocycleAnimation(frames=frames_oriented)
+    assert anim_oriented.is_aligned is True
+
+    # Non-oriented kaleidocycles should also satisfy alignment constraint
+    frames_non_oriented = [Kaleidocycle(6, oriented=False, seed=i).hinges for i in range(3)]
+    anim_non_oriented = KaleidocycleAnimation(frames=frames_non_oriented)
+    assert anim_non_oriented.is_aligned is True
+
+    # Create animation from random hinges (may not satisfy alignment)
+    frames_random = [random_hinges(6, seed=i).as_array() for i in range(3)]
+    anim_random = KaleidocycleAnimation(frames=frames_random)
+
+    # Random hinges may or may not satisfy alignment - just check it's a boolean
+    result = anim_random.is_aligned
+    assert isinstance(result, bool)
+
+
+def test_is_unit_norm_property():
+    """Test is_unit_norm property."""
+    # Create frames with unit norm
+    frames_unit = [random_hinges(6, seed=i).as_array() for i in range(5)]
+    anim_unit = KaleidocycleAnimation(frames=frames_unit)
+
+    assert anim_unit.is_unit_norm is True
+
+    # Create frames with non-unit norm
+    frames_non_unit = [random_hinges(6, seed=i).as_array() * 2.0 for i in range(5)]
+    anim_non_unit = KaleidocycleAnimation(frames=frames_non_unit)
+
+    assert anim_non_unit.is_unit_norm is False
+
+
+def test_constant_torsion_property():
+    """Test constant_torsion property."""
+    # Create kaleidocycle with approximately constant torsion
+    # (this is typical for well-constructed kaleidocycles)
+    frames = [random_hinges(6, seed=42).as_array() for i in range(3)]
+    anim = KaleidocycleAnimation(frames=frames)
+
+    # The constant_torsion property returns either a float or None
+    result = anim.constant_torsion
+    assert result is None or isinstance(result, float)
+
+    # If it's a float, it should be positive (torsion angles are non-negative)
+    if result is not None:
+        assert result >= 0

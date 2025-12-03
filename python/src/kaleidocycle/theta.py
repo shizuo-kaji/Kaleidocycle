@@ -832,12 +832,19 @@ def generate_theta_binormals(
     N: int,
     t: float = 0.0,
     gamma: float = 0.0,
+    *,
+    use_curve_fallback: bool = True,
+    magnitude_threshold: float = 0.1,
 ) -> NDArray[np.float64]:
     """Generate binormal (hinge) vectors directly from theta functions.
 
     Uses Mathematica's direct formulas based on wave functions f and g to compute
     binormals without relying on curve generation. The binormals are computed from
     differences of complex wave functions at adjacent spatial indices.
+
+    For numerical stability, when raw binormals have significantly varying
+    magnitudes (indicating numerical issues in wave functions), automatically
+    falls back to computing binormals from the curve.
 
     Args:
         v: Parameter v (controls shape)
@@ -847,6 +854,10 @@ def generate_theta_binormals(
         N: Number of tetrahedra
         t: Time parameter for evolution (default 0.0)
         gamma: Phase parameter (default 0.0)
+        use_curve_fallback: If True, fall back to curve-based computation when
+                           wave functions are numerically unstable (default True)
+        magnitude_threshold: Threshold for detecting unstable magnitudes
+                           (default 0.1 means >10% variation triggers fallback)
 
     Returns:
         Array of binormal (hinge) vectors, shape (N+1, 3)
@@ -861,7 +872,14 @@ def generate_theta_binormals(
         >>> binormals = generate_theta_binormals(v, 0, r, y, N, t=0.0)
         >>> binormals.shape
         (39, 3)
+
+    Note:
+        Wave function formulas can be numerically unstable for certain parameter
+        combinations. When detected, this function automatically uses curve-based
+        binormal computation for better numerical stability.
     """
+    from .geometry import curve_to_binormals
+
     binormals = np.zeros((N + 1, 3), dtype=float)
 
     # Compute raw binormals from Mathematica formulas
@@ -869,6 +887,28 @@ def generate_theta_binormals(
         binormals[j, 0] = eBx(v, z, r, y, j, t, gamma)
         binormals[j, 1] = eBy(v, z, r, y, j, t, gamma)
         binormals[j, 2] = eBz(v, z, r, y, j, t, gamma)
+
+    # Check if raw magnitudes are reasonable
+    raw_norms = np.linalg.norm(binormals, axis=1)
+    mean_norm = np.mean(raw_norms)
+    max_deviation = np.max(np.abs(raw_norms - mean_norm)) / mean_norm
+
+    if use_curve_fallback and max_deviation > magnitude_threshold:
+        # Raw binormals have significantly varying magnitudes - use curve fallback
+        # this is due to the zeros of theta4
+        import warnings
+        warnings.warn(
+            f"Wave function binormals have unstable magnitudes "
+            f"(max deviation {max_deviation:.1%} from mean). "
+            f"Using curve-based computation for better stability.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+
+        # Generate curve and compute binormals from it
+        curve = generate_theta_curve(v, z, r, y, N, t, gamma)
+        binormals = curve_to_binormals(curve, reference=None)
+        return binormals
 
     # normalize binormals
     for j in range(N + 1):

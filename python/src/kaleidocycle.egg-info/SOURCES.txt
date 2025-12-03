@@ -19,10 +19,14 @@ src/kaleidocycle.egg-info/top_level.txt
 tests/test_animation.py
 tests/test_constraints.py
 tests/test_curve_generation.py
+tests/test_generate_animation_integration.py
 tests/test_geometry.py
 tests/test_io.py
 tests/test_kaleidocycle_animation.py
+tests/test_kaleidocycle_animation_from_curves.py
+tests/test_kaleidocycle_from_n.py
 tests/test_newton.py
+tests/test_plot_band_animation.py
 tests/test_report.py
 tests/test_theta.py
 tests/test_transform.py

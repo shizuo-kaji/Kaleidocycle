@@ -311,6 +311,79 @@ class Kaleidocycle:
         """Get mean cosine."""
         return float(np.mean(self.cosines))
 
+    @property
+    def is_closed(self) -> bool:
+        """Check if the kaleidocycle satisfies the closure constraint.
+
+        Checks if closure_residual (sum of tangents) is small.
+        The closure constraint ensures that the tangent vectors sum to zero,
+        forming a closed spatial polygon.
+
+        Returns
+        -------
+        bool
+            True if closure constraint is satisfied, False otherwise
+        """
+        from .constraints import closure_residual
+
+        tolerance = 1e-3  # Tolerance for closure residual norm
+        residual = closure_residual(self.hinges, slide=0.0)
+        return bool(np.linalg.norm(residual) < tolerance)
+
+    @property
+    def is_aligned(self) -> bool:
+        """Check if the kaleidocycle satisfies the alignment constraint.
+
+        Checks if alignment_residuals (first and last hinge matching) is small.
+        For oriented kaleidocycles, first and last hinges should be equal.
+        For non-oriented, they should be opposite.
+
+        Returns
+        -------
+        bool
+            True if alignment constraint is satisfied, False otherwise
+        """
+        from .constraints import alignment_residuals
+
+        tolerance = 1e-3  # Tolerance for alignment residual norm
+        residual = alignment_residuals(self.hinges, oriented=self.oriented)
+        return bool(residual < tolerance)
+
+    @property
+    def is_unit_norm(self) -> bool:
+        """Check if all hinges have unit norm.
+
+        Returns
+        -------
+        bool
+            True if all hinges have norm approximately equal to 1, False otherwise
+        """
+        tolerance = 1e-6
+        norms = np.linalg.norm(self.hinges, axis=1)
+        return bool(np.allclose(norms, 1.0, rtol=tolerance, atol=tolerance))
+
+    @property
+    def constant_torsion(self) -> float | None:
+        """Constant torsion value if torsion is constant, None otherwise.
+
+        Computes the torsion and checks if it's constant (all torsion values
+        are approximately equal). If constant, returns the average torsion
+        value; otherwise returns None.
+
+        Returns
+        -------
+        float | None
+            Constant torsion value if torsion is constant, None otherwise
+        """
+        torsion = compute_torsion(self.hinges)
+
+        # Check if all torsion values are approximately equal
+        tolerance = 1e-4
+        if np.std(torsion) < tolerance:
+            return float(np.mean(torsion))
+        else:
+            return None
+
     def compute(
         self,
         props: list[str] | None = None,

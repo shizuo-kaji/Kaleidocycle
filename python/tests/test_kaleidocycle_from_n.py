@@ -255,3 +255,87 @@ def test_kaleidocycle_from_n_objective_selection():
             ]
 
             assert len(meaningless_warnings) == 0, f"Got meaningless warning for n={n}, oriented={oriented}"
+
+
+def test_kaleidocycle_n_property():
+    """Test n property is correctly set."""
+    kc = Kaleidocycle(7, seed=42)
+    assert kc.n == 7
+    assert kc.hinges.shape[0] == kc.n + 1
+
+
+def test_kaleidocycle_oriented_property():
+    """Test oriented property."""
+    kc_oriented = Kaleidocycle(6, oriented=True, seed=42)
+    kc_non_oriented = Kaleidocycle(6, oriented=False, seed=42)
+
+    assert kc_oriented.oriented is True
+    assert kc_non_oriented.oriented is False
+
+
+def test_kaleidocycle_is_closed_property():
+    """Test is_closed property."""
+    # Optimized kaleidocycles should satisfy closure constraint
+    kc = Kaleidocycle(6, seed=42)
+    assert kc.is_closed is True
+
+    # Create from random hinges (may not satisfy closure)
+    from kaleidocycle import random_hinges
+    hinges_random = random_hinges(6, seed=123).as_array()
+    kc_random = Kaleidocycle(hinges=hinges_random)
+
+    # Random hinges may or may not satisfy closure - just check it's a boolean
+    result = kc_random.is_closed
+    assert isinstance(result, bool)
+
+
+def test_kaleidocycle_is_aligned_property():
+    """Test is_aligned property."""
+    # Optimized kaleidocycles should satisfy alignment constraint
+    kc_oriented = Kaleidocycle(6, oriented=True, seed=42)
+    assert kc_oriented.is_aligned is True
+
+    kc_non_oriented = Kaleidocycle(6, oriented=False, seed=42)
+    assert kc_non_oriented.is_aligned is True
+
+    # Create kaleidocycle that violates alignment constraint
+    from kaleidocycle import random_hinges
+    hinges = random_hinges(6, seed=42).as_array()
+    # Modify last hinge to violate alignment (for oriented, last != first)
+    # Make the last hinge very different from the first
+    hinges[-1] = np.array([0.0, 0.0, 1.0])
+    kc_misaligned = Kaleidocycle(hinges=hinges)
+
+    # This should violate alignment constraint
+    result_misaligned = kc_misaligned.is_aligned
+    assert isinstance(result_misaligned, bool)
+
+
+def test_kaleidocycle_is_unit_norm_property():
+    """Test is_unit_norm property."""
+    kc = Kaleidocycle(6, seed=42)
+    # Optimized kaleidocycles should have unit norm hinges
+    assert kc.is_unit_norm is True
+
+    # Create non-unit norm hinges
+    from kaleidocycle import random_hinges
+    hinges = random_hinges(6, seed=42).as_array() * 2.0
+    kc_non_unit = Kaleidocycle(hinges=hinges)
+
+    assert kc_non_unit.is_unit_norm is False
+
+
+def test_kaleidocycle_constant_torsion_property():
+    """Test constant_torsion property."""
+    kc = Kaleidocycle(6, seed=42)
+
+    # Optimized kaleidocycles typically have constant torsion
+    result = kc.constant_torsion
+
+    # Should return either None or a float
+    assert result is None or isinstance(result, float)
+
+    # If it's a float, should be positive (torsion angles are non-negative)
+    if result is not None:
+        assert result >= 0
+        assert result <= np.pi  # Torsion is an angle

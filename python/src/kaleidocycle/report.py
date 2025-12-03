@@ -10,6 +10,7 @@ from .geometry import (
     binormals_to_tangents,
     compute_axis,
     compute_torsion,
+    curvature_recursion,
     pairwise_cosines,
     pairwise_curvature,
     tangents_to_curve,
@@ -104,6 +105,11 @@ def format_report(
     report_lines.append(f"Std dev of cosines: {np.std(cosines):.{precision}e}")
     report_lines.append(f"Mean curvature: {np.mean(curvatures):.{precision}f}")
     report_lines.append(f"Mean torsion: {np.mean(torsions):.{precision}f}")
+
+    # Compute curvature recursion
+    curv_rec = curvature_recursion(curvatures, oriented=config.oriented)
+    report_lines.append(f"Mean curvature recursion: {np.mean(curv_rec):.{precision}e}")
+    report_lines.append(f"Std dev curvature recursion: {np.std(curv_rec):.{precision}e}")
 
     try:
         axis = compute_axis(hinges, curvatures)
