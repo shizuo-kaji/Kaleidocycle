@@ -555,6 +555,105 @@ class Kaleidocycle:
 
         return penalty < tolerance
 
+    def is_stationary(
+        self,
+        energy: 'Literal["bending", "mean_cos"]' = 'bending',
+        *,
+        tolerance: float = 1e-6,
+        finite_diff_step: float = 1e-8,
+        config: 'ConstraintConfig | None' = None,
+    ) -> dict:
+        """Check if the kaleidocycle is at a stationary point for the given energy.
+
+        This method checks whether the current kaleidocycle configuration represents
+        a stationary point (critical point) of the specified energy function under
+        the given constraints. A configuration is stationary if the gradient of the
+        energy, when projected onto the tangent space of the constraint manifold,
+        has norm less than the specified tolerance.
+
+        Mathematically, this verifies the first-order Karush-Kuhn-Tucker (KKT)
+        optimality condition for constrained optimization:
+            ∇E(h) + Σ λ_i ∇g_i(h) = 0
+
+        where E is the energy function, g_i are the constraint functions, and λ_i
+        are the Lagrange multipliers.
+
+        Args:
+            energy: Energy function to check. Options:
+                    - 'bending': Bobenko-Suris bending energy (function of tangents)
+                    - 'mean_cos': Mean cosine, i.e., mean torsion (function of hinges)
+            tolerance: Maximum allowed norm for the projected gradient.
+                       Configurations with ||∇E_projected|| < tolerance are
+                       considered stationary. Default is 1e-6.
+            finite_diff_step: Step size for numerical differentiation via central
+                              finite differences. Default is 1e-8.
+            config: Constraint configuration. If None, uses the default configuration
+                    for this kaleidocycle (with alignment=True, constant_torsion=True,
+                    closure=True).
+
+        Returns:
+            Dictionary containing:
+            - 'is_stationary': bool
+                True if the configuration is at a stationary point
+            - 'projected_gradient_norm': float
+                Norm of the gradient projected onto the constraint tangent space.
+                Small values indicate proximity to a stationary point.
+            - 'gradient_norm': float
+                Norm of the full gradient before projection.
+            - 'constraint_penalty': float
+                Sum of squared constraint residuals. Should be small for feasible
+                configurations.
+            - 'details': dict
+                Additional diagnostic information including:
+                - 'energy': Name of energy function used
+                - 'tolerance': Tolerance value used
+                - 'finite_diff_step': Step size used for finite differences
+                - 'n_constraints': Number of constraint equations
+                - 'n_variables': Number of variables (hinge components)
+                - 'constraint_rank': Rank of constraint Jacobian matrix
+
+        Notes:
+            The method uses numerical differentiation to compute gradients, which
+            may be sensitive to the choice of finite_diff_step. The default value
+            of 1e-8 works well for most cases, but may need adjustment for
+            ill-conditioned problems.
+
+            For a configuration to be truly optimal (minimum), the second-order
+            conditions (positive definiteness of the projected Hessian) would also
+            need to be checked. This method only verifies the first-order condition.
+
+        Examples:
+            Check if an optimized kaleidocycle is at a stationary point:
+            >>> from kaleidocycle import Kaleidocycle, ConstraintConfig
+            >>> kc = Kaleidocycle(n=8, oriented=True)  # Creates optimized config
+            >>> result = kc.is_stationary('bending')
+            >>> result['is_stationary']
+            True
+            >>> result['projected_gradient_norm'] < 1e-5
+            True
+
+            Check with custom configuration:
+            >>> config = ConstraintConfig(oriented=True, constant_torsion=False)
+            >>> result = kc.is_stationary('mean_cos', tolerance=1e-5, config=config)
+            >>> print(f"Stationary: {result['is_stationary']}")
+            >>> print(f"Gradient norm: {result['projected_gradient_norm']:.2e}")
+        """
+        from typing import Literal
+        from .optimality import check_stationarity
+
+        # Use default config if not provided
+        if config is None:
+            config = self.config
+
+        # Delegate to the optimality module
+        return check_stationarity(
+            self.hinges,
+            energy,
+            config,
+            tolerance=tolerance,
+            finite_diff_step=finite_diff_step,
+        )
+
     def report(
         self,
         config: 'ConstraintConfig | None' = None,

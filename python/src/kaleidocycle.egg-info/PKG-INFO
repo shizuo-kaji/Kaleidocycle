@@ -8,12 +8,19 @@ Description-Content-Type: text/markdown
 Requires-Dist: numpy>=1.26
 Requires-Dist: scipy>=1.11
 Requires-Dist: matplotlib>=3.8
+Provides-Extra: jax
+Requires-Dist: jax>=0.4.25; extra == "jax"
+Requires-Dist: jaxlib>=0.4.25; extra == "jax"
+Requires-Dist: jaxopt>=0.8.3; extra == "jax"
 Provides-Extra: dev
 Requires-Dist: pytest>=7.4; extra == "dev"
 Requires-Dist: ruff>=0.5.0; extra == "dev"
 Requires-Dist: hypothesis>=6.92; extra == "dev"
 Requires-Dist: jupyterlab>=4.2; extra == "dev"
 Requires-Dist: ipywidgets>=8.1; extra == "dev"
+Requires-Dist: jax>=0.4.25; extra == "dev"
+Requires-Dist: jaxlib>=0.4.25; extra == "dev"
+Requires-Dist: jaxopt>=0.8.3; extra == "dev"
 
 # Kaleidocycle Python Port (WIP)
 

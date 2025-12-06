@@ -48,7 +48,7 @@ def anchor_residuals(
 def unit_norm_residuals(hinges: NDArray[np.float64]) -> NDArray[np.float64]:
     """‖h_i‖ - 1 for every hinge."""
 
-    return np.linalg.norm(hinges, axis=1) - 1.0
+    return np.sum(hinges ** 2, axis=1) - 1.0
 
 
 def closure_residual(
@@ -67,9 +67,9 @@ def closure_residual(
 def alignment_residuals(hinges: NDArray[np.float64], oriented=True) -> NDArray[np.float64]:
         """Constraint: First and last hinge should match."""
         if oriented:
-            return np.linalg.norm(hinges[0] - hinges[-1])
+            return hinges[0] - hinges[-1]
         else:
-            return np.linalg.norm(hinges[0] + hinges[-1])
+            return hinges[0] + hinges[-1]
 
 
 def constant_torsion_residuals(hinges: NDArray[np.float64], reference: float = None) -> NDArray[np.float64]:

@@ -24,7 +24,7 @@ def format_report(
     config: ConstraintConfig | None = None,
     *,
     kaleidocycle: 'Kaleidocycle | None' = None,
-    precision: int = 6,
+    precision: int = 10,
 ) -> str:
     """Generate a human-readable report of kaleidocycle properties.
 
