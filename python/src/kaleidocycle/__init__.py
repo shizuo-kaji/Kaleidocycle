@@ -23,6 +23,7 @@ from .geometry import (  # noqa: F401
     binormals_to_tangents,
     compute_axis,
     compute_torsion,
+    compute_linking_number,
     cos_invariant,
     curvature_recursion,
     curvature_recursion_from_tangents,
@@ -48,10 +49,10 @@ from .io import (  # noqa: F401
 from .solvers import (
     OptimizationSummary,
     SolverOptions,
-    compute_linking_number,
     moore_penrose_inverse,
     newton_solve,
     optimize_cycle,
+    optimize_multi_seed,
     optimize_with_linking_constraint,
 )
 from .visualization import (  # noqa: F401
@@ -116,6 +117,7 @@ __all__ = [
     "moore_penrose_inverse",
     "newton_solve",
     "optimize_cycle",
+    "optimize_multi_seed",
     "optimize_with_linking_constraint",
     "torsion_energy",
     "HingeFrame",

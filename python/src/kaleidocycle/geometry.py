@@ -542,14 +542,7 @@ class Kaleidocycle:
 
         # Create default config if none provided
         if config is None:
-            config = ConstraintConfig(
-                oriented=self.oriented,
-                alignment=True,
-                constant_torsion=True,
-                enforce_anchors=False,  # Don't check anchors by default
-                slide=0.0,
-            )
-
+            config = self.config
         # Compute constraint penalty
         penalty = constraint_penalty(self.hinges, config)
 
@@ -975,7 +968,7 @@ def alternating_layer_hinges(
     phi: float,
     delta: float,
 ) -> HingeFrame:
-    """Generate the alternating-layer ansatz used for the synthetic legacy sample."""
+    """Generate the alternating-layer ansatz for initial hinges."""
 
     if n % 2 != 0:
         raise ValueError("alternating-layer construction requires even n")
@@ -1340,6 +1333,29 @@ def curve_to_binormals(
     """
     T = curve_to_tangents(curve, normalize=False)
     return tangents_to_binormals(T, reference)
+
+
+def compute_linking_number(hinges: NDArray[np.float64]) -> float:
+    """Compute linking number Lk = Tw + Wr from binormals.
+
+    Args:
+        hinges: Binormal (hinge) vectors, shape (N+1, 3)
+
+    Returns:
+        Linking number in units of π (so Lk=1 means π linking)
+
+    Note:
+        Uses Călugăreanu-White-Fuller theorem: Lk = Tw + Wr
+        - Tw (total twist) from binormals
+        - Wr (writhe) from curve
+    """
+    tangents = binormals_to_tangents(hinges, normalize=True)
+    curve = tangents_to_curve(tangents)
+
+    tw = total_twist(hinges)
+    wr = writhe(curve)
+
+    return tw + wr
 
 
 def compute_torsion(binormals: np.ndarray) -> np.ndarray:

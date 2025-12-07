@@ -22,6 +22,7 @@ class ConstraintConfig:
     alignment: bool = True # first and last hinge alignment
     closure: bool = True # curve closure constraint
     reference_torsion: float | None = None # reference value for constant torsion constraint
+    target_linking: float | None = None # target linking number for linking constraint
 
 
 def enforce_terminal(hinges: NDArray[np.float64], oriented: bool) -> NDArray[np.float64]:

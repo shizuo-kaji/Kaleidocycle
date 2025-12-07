@@ -17,6 +17,7 @@ from .geometry import (
     mean_cosine,
     writhe,
     total_twist,
+    compute_linking_number,
 )
 
 import warnings
@@ -482,32 +483,8 @@ def optimize_cycle(
     )
 
 
-def compute_linking_number(hinges: NDArray[np.float64]) -> float:
-    """Compute linking number Lk = Tw + Wr from binormals.
-
-    Args:
-        hinges: Binormal (hinge) vectors, shape (N+1, 3)
-
-    Returns:
-        Linking number in units of π (so Lk=1 means π linking)
-
-    Note:
-        Uses Călugăreanu-White-Fuller theorem: Lk = Tw + Wr
-        - Tw (total twist) from binormals
-        - Wr (writhe) from curve
-    """
-    tangents = binormals_to_tangents(hinges, normalize=True)
-    curve = tangents_to_curve(tangents)
-
-    tw = total_twist(hinges)
-    wr = writhe(curve)
-
-    return tw + wr
-
-
 def optimize_with_linking_constraint(
     initial_hinges: NDArray[np.float64],
-    target_linking: float,
     config: ConstraintConfig,
     objective: str | ObjectiveFunc = "bending",
     options: SolverOptions | None = None,
@@ -578,10 +555,10 @@ def optimize_with_linking_constraint(
         """Constraint: Lk - target_linking should be zero."""
         hinges = _reshape(flat)
         lk = compute_linking_number(hinges)
-        return lk - target_linking
+        return lk - config.target_linking
 
     # check consistency of orientation and linking target
-    if (config.oriented and (int(target_linking) % 2) != 0) or (not config.oriented and (int(target_linking) % 2) != 1):
+    if (config.oriented and (int(config.target_linking) % 2) != 0) or (not config.oriented and (int(config.target_linking) % 2) != 1):
         warnings.warn(
             "The parity of orientation and target_linking is inconsistent. "
             "The target_linking may be unattainable.",
@@ -590,30 +567,33 @@ def optimize_with_linking_constraint(
         )
 
     # Phase 1: Build constraints WITHOUT constant torsion
-    # Create temporary config without constant torsion for phase 1
+    # Must have closure=True for Lk to be well-defined and integer-valued
     config_phase1 = ConstraintConfig(
         slide=config.slide,
         oriented=config.oriented,
         enforce_anchors=config.enforce_anchors,
-        constant_torsion=False,  # these will be dealt with softly in objective
-        closure=False,
+        constant_torsion=False,  # this will be dealt with softly in objective
+        closure=True,  # MUST be closed for Lk to be integer-valued
         alignment=config.alignment,
         reference_torsion=config.reference_torsion,
     )
     constraints_phase1 = _build_constraint_dicts(config_phase1)
+    constraints_phase1.append({
+        "type": "eq",
+        "fun": linking_constraint,  # Hard constraint: Lk = target_linking
+    })
 
-    # Phase 1 objective: minimize constant torsion residuals + linking error
+    # Phase 1 objective: minimize constant torsion violations
+    # (linking number and closure are enforced as hard constraints above)
     def constant_torsion_residuals_flat(flat: NDArray[np.float64]) -> NDArray[np.float64]:
         """Constant torsion residuals for soft minimization in phase 1."""
         hinges = _reshape(flat)
         return constant_torsion_residuals(hinges, reference=config.reference_torsion)
 
     def phase1_objective(flat: NDArray[np.float64]) -> float:
-        """Phase 1: Minimize constant torsion violation + linking error."""
+        """Phase 1: Minimize constant torsion violations while satisfying Lk = target and closure."""
         torsion_error = np.sum(constant_torsion_residuals_flat(flat)**2)
-        linking_error = linking_constraint(flat)**2
-        closure_error = np.sum(closure_residual(_reshape(flat), slide=config.slide)**2)
-        return torsion_error + linking_error + closure_error
+        return torsion_error
 
     # Run Phase 1: Find feasible configuration
     # Use trust-constr for better robustness with constraints
@@ -699,6 +679,191 @@ def moore_penrose_inverse(
 
     # Compute pseudoinverse: A^+ = V * S^-1 * U^T
     return Vt.T @ np.diag(s_inv) @ U.T
+
+
+def optimize_multi_seed(
+    n: int,
+    config: ConstraintConfig,
+    *,
+    seeds: list[int] | int | None = None,
+    n_trials: int | None = None,
+    objective: str | ObjectiveFunc = "mean_cos",
+    options: SolverOptions | None = None,
+    backend: Optional[str] = None,
+    return_dataframe: bool = False,
+) -> list | tuple[list, object]:
+    """Run optimization with multiple random seeds and return list of Kaleidocycle objects.
+
+    This function runs either optimize_cycle or optimize_with_linking_constraint
+    multiple times with different random initial configurations, and returns the
+    results as a list of Kaleidocycle objects. Optionally returns a pandas DataFrame
+    with basic properties like mean_cos, bending energy, linking number, penalty, etc.
+
+    Args:
+        n: Number of tetrahedra in the kaleidocycle
+        config: Constraint configuration
+        seeds: Either a list of explicit seed values or a single integer specifying
+               the number of trials. If None, n_trials must be specified.
+        n_trials: Number of trials to run (alternative to specifying seeds).
+                  If specified, random seeds will be generated.
+        objective: Objective function to minimize (default: "mean_cos")
+        options: Solver options (method, penalty weight, constraint solver flag, etc.)
+        backend: Backend to use ('numpy' or 'jax'). If None, uses current global backend.
+        return_dataframe: If True, return a tuple (results, dataframe) where dataframe
+                         contains properties of each result. Requires pandas.
+
+    Returns:
+        If return_dataframe=False:
+            List of Kaleidocycle objects, one per seed
+        If return_dataframe=True:
+            Tuple of (list of Kaleidocycle objects, pandas DataFrame with properties)
+
+    Raises:
+        ValueError: If both seeds and n_trials are None, or if both are specified
+        ValueError: If optimizer is not recognized
+        ValueError: If target_linking is None when using optimize_with_linking_constraint
+        ImportError: If return_dataframe=True but pandas is not installed
+
+    Examples:
+        Run optimize_cycle with 5 random trials:
+        >>> from kaleidocycle import ConstraintConfig
+        >>> config = ConstraintConfig(oriented=True, constant_torsion=True)
+        >>> results = optimize_multi_seed(9, config, n_trials=5)
+        >>> len(results)
+        5
+
+        Run with explicit seeds:
+        >>> results = optimize_multi_seed(9, config, seeds=[42, 123, 456])
+        >>> len(results)
+        3
+
+        Get results with dataframe:
+        >>> results, df = optimize_multi_seed(
+        ...     9, config, n_trials=5, return_dataframe=True
+        ... )
+        >>> df.columns
+        Index(['seed', 'mean_cos', 'bending_energy', 'linking_number', 'penalty', ...])
+
+    """
+    from .geometry import Kaleidocycle, random_hinges
+
+    # Validate seed/n_trials arguments
+    if seeds is None and n_trials is None:
+        raise ValueError("Either 'seeds' or 'n_trials' must be specified")
+    if seeds is not None and n_trials is not None:
+        raise ValueError("Cannot specify both 'seeds' and 'n_trials'")
+
+    # Generate list of seeds
+    if seeds is not None:
+        if isinstance(seeds, int):
+            # seeds is the number of trials
+            seed_list = list(range(seeds))
+        else:
+            # seeds is an explicit list
+            seed_list = list(seeds)
+    else:
+        # n_trials is specified
+        seed_list = list(range(n_trials))
+
+    # Run optimization for each seed
+    results: list[Kaleidocycle] = []
+
+    for seed in seed_list:
+        # Generate random initial configuration
+        initial_hinges = random_hinges(n, seed=seed, oriented=config.oriented).as_array()
+
+        # Run optimization
+        if config.target_linking is None:
+            opt_result = optimize_cycle(
+                initial_hinges,
+                config,
+                objective=objective,
+                options=options,
+                backend=backend,
+            )
+        else:  # optimize_with_linking_constraint
+            opt_result = optimize_with_linking_constraint(
+                initial_hinges,
+                config=config,
+                objective=objective,
+                options=options,
+            )
+
+        # Create Kaleidocycle object from optimized hinges
+        kc = Kaleidocycle(hinges=opt_result.hinges)
+
+        # Store the seed and optimization info in metadata
+        kc.metadata['seed'] = seed
+        kc.metadata['optimization'] = {
+            'objective': objective if isinstance(objective, str) else 'custom',
+            'energy': opt_result.energy,
+            'penalty': opt_result.penalty,
+            'success': opt_result.success,
+            'backend': opt_result.backend_name,
+        }
+        if config.target_linking is not None:
+            kc.metadata['optimization']['target_linking'] = config.target_linking
+
+        results.append(kc)
+
+    # Optionally create dataframe
+    if return_dataframe:
+        try:
+            import pandas as pd
+        except ImportError as e:
+            raise ImportError(
+                "pandas is required for return_dataframe=True. "
+                "Install with: pip install pandas"
+            ) from e
+
+        # Compute properties for all results
+        data_rows = []
+        for i, kc in enumerate(results):
+            seed = kc.metadata.get('seed', i)
+            opt_info = kc.metadata.get('optimization', {})
+
+            # Compute basic properties
+            row = {
+                'seed': seed,
+                'mean_cos': kc.mean_cosine,
+                'objective': opt_info.get('objective'),
+                'success': opt_info.get('success'),
+                'backend': opt_info.get('backend'),
+            }
+
+            # Compute energies
+            from .energies import bending_energy, dipole_energy, torsion_energy
+            row['bending_energy'] = bending_energy(kc.tangents)
+            row['dipole_energy'] = dipole_energy(kc.hinges, kc.curve)
+            row['torsion_energy'] = torsion_energy(kc.hinges)
+
+            # Compute topological properties
+            try:
+                row['writhe'] = writhe(kc.curve)
+                row['twist'] = total_twist(kc.hinges)
+                row['linking_number'] = compute_linking_number(kc.hinges)
+            except Exception:
+                row['writhe'] = None
+                row['twist'] = None
+                row['linking_number'] = None
+
+            # Compute constraint penalty
+            row['penalty'] = constraint_penalty(kc.hinges, config)
+
+            # Add constant torsion if applicable
+            const_torsion = kc.constant_torsion
+            row['constant_torsion'] = const_torsion if const_torsion is not None else None
+
+            # Add optimization energy and penalty
+            row['opt_energy'] = opt_info.get('energy')
+            row['opt_penalty'] = opt_info.get('penalty')
+
+            data_rows.append(row)
+
+        df = pd.DataFrame(data_rows)
+        return results, df
+
+    return results
 
 
 def newton_solve(
