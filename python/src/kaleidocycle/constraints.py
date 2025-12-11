@@ -8,7 +8,7 @@ from typing import Dict
 import numpy as np
 from numpy.typing import NDArray
 
-from .geometry import binormals_to_tangents
+from .geometry import binormals_to_tangents, pairwise_curvature, curvature_recursion
 
 
 @dataclass(slots=True)
@@ -23,6 +23,7 @@ class ConstraintConfig:
     closure: bool = True # curve closure constraint
     reference_torsion: float | None = None # reference value for constant torsion constraint
     target_linking: float | None = None # target linking number for linking constraint
+    curvature_recursion: bool = False # curvature recursion constraint (u[i] - u[0] = 0)
 
 
 def enforce_terminal(hinges: NDArray[np.float64], oriented: bool) -> NDArray[np.float64]:
@@ -92,6 +93,24 @@ def constant_torsion_residuals(hinges: NDArray[np.float64], reference: float = N
         return dot_products - reference
 
 
+def curvature_recursion_residuals(hinges: NDArray[np.float64], oriented: bool) -> NDArray[np.float64]:
+    """Enforce curvature recursion values to be constant: u[i] - u[0] = 0.
+
+    u is the residual vector from geometry.curvature_recursion.
+    """
+    if len(hinges) < 3:
+         return np.array([])
+
+    tangents = binormals_to_tangents(hinges, normalize=True)
+    curvatures = pairwise_curvature(hinges, tangents, oriented=oriented)
+    u = curvature_recursion(curvatures, oriented=oriented)
+
+    if len(u) == 0:
+        return u
+
+    return u[1:] - u[0]
+
+
 def constraint_residuals(
     hinges: NDArray[np.float64],
     config: ConstraintConfig,
@@ -108,6 +127,8 @@ def constraint_residuals(
         residuals["constant_torsion"] = constant_torsion_residuals(hinges, reference=config.reference_torsion)
     if config.alignment:
         residuals["alignment"] = alignment_residuals(hinges, oriented=config.oriented)
+    if config.curvature_recursion:
+        residuals["curvature_recursion"] = curvature_recursion_residuals(hinges, oriented=config.oriented)
     return residuals
 
 

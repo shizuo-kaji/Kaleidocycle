@@ -9,7 +9,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult, minimize
 
-from .constraints import ConstraintConfig, constraint_penalty, enforce_terminal, constant_torsion_residuals, closure_residual
+from .constraints import ConstraintConfig, constraint_penalty, enforce_terminal, constant_torsion_residuals, closure_residual, curvature_recursion_residuals
 from .energies import bending_energy, dipole_energy, torsion_energy
 from .geometry import (
     tangents_to_curve,
@@ -37,7 +37,7 @@ def _reshape(vec: NDArray[np.float64]) -> NDArray[np.float64]:
     return arr.reshape(-1, 3)
 
 
-def _get_objective(name: str, target=0) -> ObjectiveFunc:
+def _get_objective(name: str, target=0, oriented=True) -> ObjectiveFunc:
     if name == "bending":
         return lambda hinges: bending_energy(np.cross(hinges[:-1], hinges[1:]))
     if name == "torsion":
@@ -50,6 +50,8 @@ def _get_objective(name: str, target=0) -> ObjectiveFunc:
         return lambda hinges: -mean_cosine(hinges, wrap=False)
     if name == "target_mean_cos":
         return lambda hinges: (mean_cosine(hinges, wrap=False) - target) ** 2
+    if name == "curvature_recursion":
+        return lambda hinges: (curvature_recursion_residuals(hinges, oriented=oriented)**2).sum()
     raise ValueError(f"unknown objective '{name}'")
 
 
@@ -236,6 +238,56 @@ def _optimize_cycle_jax_scipy(
                 dots = jnp.einsum("ij,ij->i", a, b)
                 #cosines = jnp.clip(dots / norms, -1.0, 1.0)
                 return -jnp.mean(dots)
+        elif objective_name == 'curvature_recursion':
+            def jax_binormals_to_tangents(hinges, normalize=True):
+                T = jnp.cross(hinges[:-1], hinges[1:])
+                if normalize:
+                    norms = jnp.linalg.norm(T, axis=1, keepdims=True)
+                    T = T / norms
+                return T
+
+            def jax_pairwise_curvature(binormals, tangents, signed=True):
+                # Replicate geometry.pairwise_curvature
+                B = binormals
+                T = tangents
+                T_prev = jnp.roll(T, 1, axis=0)
+                B_used = B[:-1]
+                cross_prod = jnp.cross(B_used, T_prev)
+                dots = jnp.sum(cross_prod * T, axis=1)
+                s = jnp.sign(dots)
+                s = jnp.where(s == 0, 1.0, s)
+                if not signed:
+                    s = jnp.ones_like(s)
+                cos_dots = jnp.sum(T_prev * T, axis=1)
+                cos_dots = jnp.clip(cos_dots, -1.0, 1.0)
+                K = s * jnp.arccos(cos_dots)
+                return K
+
+            def jax_curvature_recursion(curvatures, oriented=True):
+                # Replicate geometry.curvature_recursion
+                K = curvatures
+                n = len(K)
+                s = jnp.ones(n)
+                if not oriented:
+                    s = s.at[0].set(-1.0)
+                    s = s.at[-1].set(-1.0)
+                K_plus = jnp.roll(K, -1)
+                K_minus = jnp.roll(K, 1)
+                tan_i = jnp.tan(K / 2.0)
+                tan_plus = jnp.tan(K_plus / 2.0)
+                tan_minus = jnp.tan(K_minus / 2.0)
+                term1 = s * tan_plus * tan_minus
+                term2 = tan_i**2
+                term3 = term1 * term2 # s * ... * tan_i^2
+                result = term1 - term2 + term3
+                return result
+
+            def jax_objective_fn(h):
+                tangents = jax_binormals_to_tangents(h)
+                curvatures = jax_pairwise_curvature(h, tangents)
+                u = jax_curvature_recursion(curvatures, oriented=config.oriented)
+                residuals = u[1:] - u[0]
+                return jnp.sum(residuals**2)
         else:
             raise ValueError(f"JAX backend does not support objective '{objective_name}'")
     else:
