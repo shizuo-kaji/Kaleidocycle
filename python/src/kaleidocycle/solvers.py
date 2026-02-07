@@ -918,6 +918,192 @@ def optimize_multi_seed(
     return results
 
 
+def optimize_curvature_torsion(
+    n: int,
+    *,
+    oriented: bool = True,
+    seed: int | None = None,
+    initial_curvatures: NDArray[np.float64] | None = None,
+    initial_torsion_angle: float | None = None,
+    initial_binormal: NDArray[np.float64] | None = None,
+    initial_tangent: NDArray[np.float64] | None = None,
+    objective: str | ObjectiveFunc = "bending",
+    options: SolverOptions | None = None,
+    backend: Optional[str] = None,
+) -> OptimizationSummary:
+    """Optimize kaleidocycle by varying curvatures and constant torsion angle.
+
+    This solver optimizes over the space of curvatures K[i] (n values) and
+    constant torsion angle τ (1 value), subject to closure and alignment
+    constraints. The hinges are reconstructed via from_curvatures_and_cos at
+    each iteration.
+
+    Args:
+        n: Number of tetrahedra in the kaleidocycle
+        oriented: Whether the kaleidocycle is oriented
+        seed: Random seed for initial values
+        initial_curvatures: Initial curvature values, shape (n,).
+                           If None, uses random values in [-π, π].
+        initial_torsion_angle: Initial torsion.
+                              If None, uses random value
+        initial_binormal: Initial binormal B[0] for reconstruction, shape (3,).
+                         Defaults to [0, 0, 1] if not provided.
+        initial_tangent: Initial tangent T[0] for reconstruction, shape (3,).
+                        Defaults to [0, 1, 0] if not provided.
+        objective: Objective function to minimize (energy functional name or callable)
+        options: Solver options
+        backend: Backend to use ('numpy' or 'jax'). If None, uses current global backend.
+
+    Returns:
+        OptimizationSummary with optimized configuration and diagnostics
+
+    Example:
+        >>> # Minimize bending energy over curvature space
+        >>> result = optimize_curvature_torsion(
+        ...     n=8,
+        ...     oriented=True,
+        ...     objective="bending"
+        ... )
+        >>> kc = Kaleidocycle(hinges=result.hinges)
+    """
+    from .geometry import from_curvatures_and_cos
+
+    opts = options or SolverOptions()
+    if seed is not None:
+        np.random.seed(seed)
+
+    # Set initial values
+    if initial_curvatures is None:
+        initial_curvatures = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
+    else:
+        initial_curvatures = np.asarray(initial_curvatures, dtype=float)
+        if initial_curvatures.shape != (n,):
+            raise ValueError(f"initial_curvatures must have shape ({n},), got {initial_curvatures.shape}")
+
+    if initial_torsion_angle is None:
+        # Random angle corresponding to cos ∈ [-1, 1]
+        initial_torsion_angle = np.random.uniform(low=-np.pi, high=np.pi)
+
+    # Flatten initial guess: [curvatures (n), torsion_angle (1)]
+    x0 = np.append(initial_curvatures, initial_torsion_angle)
+
+    def unpack_variables(x: NDArray[np.float64]) -> tuple[NDArray[np.float64], float]:
+        """Extract curvatures and torsion angle from flat variable vector."""
+        curvatures = x[:n]
+        torsion_angle = float(x[n])
+        return curvatures, torsion_angle
+
+    def reconstruct_frames(x: NDArray[np.float64]) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Reconstruct binormals and tangents from curvatures and torsion angle."""
+        curvatures, torsion_angle = unpack_variables(x)
+        # Convert torsion angle to cosine for from_curvatures_and_cos
+        cos_torsion = np.tanh(torsion_angle)
+        B, T = from_curvatures_and_cos(
+            curvatures,
+            cos_torsion,
+            initial_binormal=initial_binormal,
+            initial_tangent=initial_tangent,
+        )
+        return B, T
+
+    # Define objective function that works directly with curvatures and torsion
+    def energy_func(x: NDArray[np.float64]) -> float:
+        """Objective function to minimize, computed directly from curvatures and torsion."""
+        curvatures, torsion_angle = unpack_variables(x)
+        cos_torsion = np.tanh(torsion_angle)
+
+        if isinstance(objective, str):
+            # Objectives that don't require frame reconstruction
+            if objective == "mean_cos":
+                # Mean cosine = constant torsion cosine for constant torsion
+                return cos_torsion
+
+            elif objective == "neg_mean_cos":
+                # Negative mean cosine
+                return -cos_torsion
+
+            elif objective == "target_mean_cos":
+                # Target mean cosine objective
+                target = getattr(objective, 'target', 0.0)
+                return (cos_torsion - target) ** 2
+
+            elif objective == "curvature_recursion":
+                # Curvature recursion residuals - computed directly from curvatures
+                from .geometry import curvature_recursion
+                residuals = curvature_recursion(curvatures, oriented=oriented)
+                return float(np.sum(residuals**2))
+
+            # Objectives that require frame reconstruction
+            elif objective == "bending":
+                # Bending energy from tangents - requires T reconstruction
+                from .energies import bending_energy
+                return bending_energy(curvatures)
+
+            elif objective == "dipole":
+                # Dipole energy requires curve reconstruction
+                B, T = reconstruct_frames(x)
+                curve = tangents_to_curve(T, center=True)
+                return dipole_energy(B, curve)
+
+            else:
+                # Fallback: reconstruct hinges and use standard objective
+                B,_ = reconstruct_frames(x)
+                objective_fn = _get_objective(objective, oriented=oriented)
+                return objective_fn(B)
+        else:
+            # Custom objective function: reconstruct hinges
+            B,_ = reconstruct_frames(x)
+            return objective(B)
+
+    # Build constraints
+    def closure_constraint(x: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Constraint: sum of tangents should be zero."""
+        B,_ = reconstruct_frames(x)
+        return closure_residual(B, slide=0.0)
+
+    def alignment_constraint(x: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Constraint: B[0] = ±B[-1] depending on orientation."""
+        B,_ = reconstruct_frames(x)
+        if oriented:
+            return B[0] - B[-1]
+        else:
+            return B[0] + B[-1]
+
+    constraints = [
+        {"type": "eq", "fun": closure_constraint},
+        {"type": "eq", "fun": alignment_constraint},
+    ]
+
+    # Run optimization
+    result = minimize(
+        energy_func,
+        x0,
+        method=opts.constraint_method,
+        constraints=constraints,
+        options={"maxiter": opts.maxiter, "disp": False},
+    )
+
+    # Extract final hinges
+    final_hinges = reconstruct_frames(result.x)[0]
+
+    # Compute constraint penalty
+    from .constraints import ConstraintConfig
+    config = ConstraintConfig(
+        oriented=oriented,
+        closure=True,
+        alignment=True,
+        constant_torsion=False,
+    )
+    penalty = constraint_penalty(final_hinges, config)
+
+    return OptimizationSummary(
+        hinges=final_hinges,
+        energy=energy_func(result.x),
+        penalty=penalty,
+        _scipy_result=result,
+    )
+
+
 def newton_solve(
     residual_fn: Callable[[NDArray[np.float64]], NDArray[np.float64]],
     jacobian_fn: Callable[[NDArray[np.float64]], NDArray[np.float64]],

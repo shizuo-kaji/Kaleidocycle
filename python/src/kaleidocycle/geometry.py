@@ -268,6 +268,10 @@ class Kaleidocycle:
         return self._curve
 
     @property
+    def binormals(self) -> np.ndarray:
+        return self.hinges
+
+    @property
     def tangents(self) -> np.ndarray:
         """Get tangent vectors, computing if necessary."""
         if self._tangents is None:
@@ -1543,6 +1547,118 @@ def cos_invariant(
     # Sum cosines (excluding the last element which is s*omega[0])
     n = len(K)
     return float(np.sum(np.cos(omega[:n])))
+
+
+def from_curvatures_and_cos(
+    curvatures: np.ndarray,
+    cos_torsion: float,
+    *,
+    initial_binormal: np.ndarray | None = None,
+    initial_tangent: np.ndarray | None = None,
+    normalize: bool = False,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Create kaleidocycle hinges from curvatures and constant torsion cosine.
+
+    Reconstructs binormal (hinge) vectors from a sequence of discrete curvatures
+    and a constant torsion angle (specified via its cosine). Uses discrete Frenet
+    frame evolution where T[i] = B[i] × B[i+1].
+
+    Args:
+        curvatures: Array of curvature values, shape (n,)
+        cos_torsion: Cosine of the constant torsion angle between consecutive binormals
+        initial_binormal: Optional initial binormal vector B[0], shape (3,).
+                         Defaults to [0, 0, 1] if not provided.
+        initial_tangent: Optional initial tangent vector T[0], shape (3,).
+                        Must be perpendicular to initial_binormal.
+                        Defaults to [0, 1, 0] if not provided.
+
+    Returns:
+        Tuple of (binormals, tangents):
+        - binormals: Array of binormal vectors, shape (n+1, 3)
+        - tangents: Array of tangent vectors, shape (n, 3)
+
+    Example:
+        >>> curvatures = np.array([0.5, 0.6, 0.5, 0.6, 0.5, 0.6])
+        >>> cos_val = 0.8
+        >>> B, T = from_curvatures_and_cos(curvatures, cos_val)
+        >>> kc = Kaleidocycle(hinges=B)
+    """
+    K = np.asarray(curvatures, dtype=float)
+    if K.ndim != 1:
+        raise ValueError(f"curvatures must be 1D array, got shape {K.shape}")
+
+    n = len(K)
+    if n < 3:
+        raise ValueError("need at least 3 curvatures")
+
+    if not -1.0 <= cos_torsion <= 1.0:
+        raise ValueError(f"cos_torsion must be in [-1, 1], got {cos_torsion}")
+
+    sin_torsion = -np.sqrt(1 - cos_torsion**2)
+
+    # Initialize arrays
+    B = np.zeros((n + 1, 3))
+    T = np.zeros((n, 3))
+
+    # Set initial binormal B[0]
+    if initial_binormal is None:
+        B[0] = np.array([0.0, 0.0, 1.0])
+    else:
+        B[0] = np.asarray(initial_binormal, dtype=float)
+        if B[0].shape != (3,):
+            raise ValueError(f"initial_binormal must have shape (3,), got {B[0].shape}")
+        B[0] = B[0] / np.linalg.norm(B[0])
+
+    # Set initial tangent T[0] (perpendicular to B[0])
+    if initial_tangent is None:
+        T[0] = np.array([0.0, 1.0, 0.0])
+        # Make perpendicular to B[0]
+        T[0] = T[0] - np.dot(T[0], B[0]) * B[0]
+        T[0] = T[0] / np.linalg.norm(T[0])
+    else:
+        T[0] = np.asarray(initial_tangent, dtype=float)
+        if T[0].shape != (3,):
+            raise ValueError(f"initial_tangent must have shape (3,), got {T[0].shape}")
+        # Check perpendicularity
+        if np.abs(np.dot(T[0], B[0])) > 1e-6:
+            raise ValueError("initial_tangent must be perpendicular to initial_binormal")
+        T[0] = T[0] / np.linalg.norm(T[0])
+
+    # First step: compute B[1] from B[0] and T[0]
+    # N[0] = B[0] × T[0]
+    N0 = np.cross(B[0], T[0])
+    N0 = N0 / np.linalg.norm(N0)
+
+    # B[1] = cos(τ) * B[0] + sin(τ) * N[0]
+    B[1] = cos_torsion * B[0] + sin_torsion * N0
+    if normalize:
+        B[1] = B[1] / np.linalg.norm(B[1])
+
+    # Iterate to build the rest of the sequence
+    for i in range(1, n):
+        # Compute T[i] from T[i-1] and curvature K[i]
+        # M = B[i] × T[i-1]
+        M = np.cross(B[i], T[i - 1])
+        if normalize:
+            M = M / np.linalg.norm(M)
+
+        # T[i] = cos(K[i]) * T[i-1] + sin(K[i]) * M
+        T[i] = np.cos(K[i]) * T[i - 1] + np.sin(K[i]) * M
+        if normalize:
+            T[i] = T[i] / np.linalg.norm(T[i])
+
+        # Compute B[i+1] from B[i] and T[i]
+        # N[i] = B[i] × T[i]
+        N = np.cross(B[i], T[i])
+        if normalize:
+            N = N / np.linalg.norm(N)
+
+        # B[i+1] = cos(τ) * B[i] + sin(τ) * N[i]
+        B[i + 1] = cos_torsion * B[i] + sin_torsion * N
+        if normalize:
+            B[i + 1] = B[i + 1] / np.linalg.norm(B[i + 1])
+
+    return B, T
 
 
 def curvature_recursion(

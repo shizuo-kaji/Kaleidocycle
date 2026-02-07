@@ -33,16 +33,18 @@ def _normalized_dot(a: NDArray[np.float64], b: NDArray[np.float64]) -> NDArray[n
 
 
 def bending_energy(
-    tangents: NDArray[np.float64],
+    tangents_or_curvatures: NDArray[np.float64],
     *,
     quadratic: bool = False,
 ) -> float:
-    """Bobenko-Suris bending energy over the tangent vectors."""
-
-    if tangents.ndim != 2 or tangents.shape[1] != 3:
-        msg = f"expected (m, 3) tangent array, got shape {tangents.shape}"
+    """Bobenko-Suris bending energy over the tangent vectors. ∑ᵢ log(1+tan(κᵢ/2)²)."""
+    if tangents_or_curvatures.ndim ==1: # assume curvatures
+        curvatures = tangents_or_curvatures
+        return(float(np.sum(np.arctan(curvatures/2)**2)))
+    elif tangents_or_curvatures.ndim != 2 or tangents_or_curvatures.shape[1] != 3:
+        msg = f"expected (m, 3) tangent array, got shape {tangents_or_curvatures.shape}"
         raise ValueError(msg)
-    a, b = _pairwise_vectors(tangents, wrap=True)
+    a, b = _pairwise_vectors(tangents_or_curvatures, wrap=True)
     ratios = _normalized_dot(a, b)
     # avoid numerical error near ratio = -1
     ratios = np.clip(ratios, -1.0 + 1e-15, 1.0)

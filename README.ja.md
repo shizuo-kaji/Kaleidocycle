@@ -30,21 +30,32 @@
 # 参考資料
 
 ## 特許
-メビウス・カライドサイクルの形状は以下の特許出願がされていますが，個人利用は自由です．
+メビウス・カライドサイクルの形状は以下の特許出願がされていますが，教育・研究・個人利用は全く自由ですので，ぜひ活用されてください．
 * Shizuo Kaji, Johannes Schoenke, Eliot Fried, Michael Grunwald, [Moebius Kaleidocycle](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941), 特顔2018-033395(Japan), 2019JP007314(PCT), WO 2019167941(Publication Number),2018年2月27日出願
+
+もし商用利用をお考えの場合は，[Japan Science and Technology Agency](https://www.jst.go.jp/chizai/)にご連絡ください．
 
 ## ビデオ
 * [ショートクリップ](https://youtu.be/NULt0lnuVFU)
+* [講演動画:「折り紙にひそむ数学：カライドサイクルの幾何学」](https://youtu.be/N8z3nhPQKYo?si=c0u5nN-_UzyWF_2N), 第28回MACSコロキウム, 京都大学, 2025年4月25日
 * [講演動画](https://www.youtube.com/watch?v=0vrXri2z-4w), 折り紙の科学を基盤とするアート・数理 および工学への応用Ⅱ, MIMS「現象数理学研究拠点」共同研究集会, 2021年12月2日
 * [オープンキャンパス](https://youtu.be/feZ5x4LjJBc)
 
 ## 和文解説
 メビウス・カライドサイクルについての和文解説は以下があります．
 * プレスリリース, [現代数学と折紙から生まれた新しい機構「メビウス・カライドサイクル」](https://www.kyushu-u.ac.jp/ja/researches/view/908)
-* 鍛冶静雄, [数理のクロスロード／かたちと動きの数理基盤／(1) リンク万華鏡](https://www.math.kyoto-u.ac.jp/~kaji/papers/susemi201906-linkage.pdf), 数学セミナー 2019年6月号, 日本評論社, 2019.
-* 鍛冶静雄, [かたちを算する／おもちゃのかたち](https://www.nippyo.co.jp/shop/magazine/8418.html), 数学セミナー 2021年1月号, 日本評論社, 2021.
-* 鍛冶静雄, [曲線の幾何学から生まれた閉リンク機構](https://www.math.kyoto-u.ac.jp/~kaji/papers/linkage.pdf), 2018年度精密工学会春季大会 シンポジウム資料集, pp. 62--65, 2018年3月1日.
-* 鍛冶静雄,[ユークリッド空間への図形の配置と設計への応用](https://drive.google.com/file/d/1T9TYKBqkQ1LdtojkK5dp09Pkyl5XI_wF/view?usp=sharing)
+* 鍛冶静雄, [動く折り紙「カライドサイクル」をめぐる機構学と幾何学の出会い](https://www.math.kyoto-u.ac.jp/alumni/bulletin9/kaji.pdf), 京都大学数学教室同窓会誌, Vol 9, 2025
+* 鍛冶静雄,
+  [ユークリッド空間への図形の配置と設計への応用](https://drive.google.com/file/d/1T9TYKBqkQ1LdtojkK5dp09Pkyl5XI_wF/view?usp=sharing)
+* 鍛冶静雄,
+  [曲線の幾何学から生まれた閉リンク機構](https://drive.google.com/file/d/1CtwQHpcM_HEn3ooKfJ5y40s_B99IqRwR/view?usp=sharing),
+  2018年度精密工学会春季大会 シンポジウム資料集, pp. 62–65
+* 鍛冶静雄,
+  [数理のクロスロード／かたちと動きの数理基盤／(1) リンク万華鏡](https://drive.google.com/file/d/1OzZajghUbhxeA3HFf4-TjSBeRZROcfiD/view?usp=sharing),
+  数学セミナー 2019年6月号, 日本評論社
+* 鍛冶静雄,
+  [かたちを算する／おもちゃのかたち](https://www.nippyo.co.jp/shop/magazine/8418.html),
+  数学セミナー 2021年1月号, 日本評論社
 
 ## 論文や講演
 より学術的な記述は以下にあります．
@@ -52,11 +63,11 @@
 [An explicit construction of Kaleidocycles](https://arxiv.org/abs/2308.04977)
 * 論文, Shizuo Kaji, Kenji Kajiwara, Hyeongki Park,
 [Linkage Mechanisms Governed by Integrable Deformations of Discrete Space Curves](https://arxiv.org/abs/1903.06360), in Nonlinear Systems and Their Remarkable Mathematical Structures, Volume 2, pp 356--381, CRC Press, 2019
-* 講演スライド(日本語) [Kaleidocycle](https://www.math.kyoto-u.ac.jp/~kaji/papers/ShapeDesign.pdf), 13 Mar. 2021
+<!-- * 講演スライド(日本語) [Kaleidocycle](https://www.math.kyoto-u.ac.jp/~kaji/papers/ShapeDesign.pdf), 13 Mar. 2021
 * 講演スライド(英語) [Geometry of Kaleidocycles](https://www.math.kyoto-u.ac.jp/~kaji/papers/Kaleidocycle21.pdf), presented at the Kyushu-Illinois Strategic Partnership Colloquia Series #2 Mathematics Without Borders - Applied and Applicable, 11 Mar. 2021
 * 古い講演資料 Shizuo Kaji, Eliot Fried, Michael Grunwald, Johannes Schoenke,
 [Geometry of closed kinematic chain](https://www.math.kyoto-u.ac.jp/~kaji/files/Kaleidocycle17.pdf),
-IMI Workshop Mathematics in Interface, Dislocation and Structure of Crystals, Nishijin plaza, Fukuoka, 29 Aug. 2017
+IMI Workshop Mathematics in Interface, Dislocation and Structure of Crystals, Nishijin plaza, Fukuoka, 29 Aug. 2017 -->
 
 特許や上記資料のいくつかの内容は，以下の論文にも含まれています．
 * Johannes Schoenke and Eliot Fried,
@@ -69,7 +80,7 @@ IMI Workshop Mathematics in Interface, Dislocation and Structure of Crystals, Ni
 ![K8](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/k8_t.gif?raw=true)
 ![K15](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/K15_link.gif?raw=true)
 ![K24div](https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/K24div-trefoil.gif?raw=true)
-<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3d_model/Kaleidocycle_N7Trefoil_all_connected.png?raw=true" width="20%" />
+<img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/3d_model/Kaleidocycle_N7Trefoil_all_connected.png?raw=true" width="30%" />
 <img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/3dprint_N12.jpg?raw=true" width="30%" />
 <img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/3dprint-K8.jpg?raw=true" width="30%" />
 <img src="https://github.com/shizuo-kaji/Kaleidocycle/blob/master/image/straw-K8.jpg?raw=true" width="30%" />
