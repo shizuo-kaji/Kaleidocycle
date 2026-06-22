@@ -33,7 +33,7 @@
 メビウス・カライドサイクルの形状は以下の特許出願がされていますが，教育・研究・個人利用は全く自由ですので，ぜひ活用されてください．
 * Shizuo Kaji, Johannes Schoenke, Eliot Fried, Michael Grunwald, [Moebius Kaleidocycle](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941), 特顔2018-033395(Japan), 2019JP007314(PCT), WO 2019167941(Publication Number),2018年2月27日出願
 
-もし商用利用をお考えの場合は，[Japan Science and Technology Agency](https://www.jst.go.jp/chizai/)にご連絡ください．
+もし商用利用をお考えの場合は，[Japan Science and Technology Agency](https://www.jst.go.jp/chizai/) にご連絡ください．
 
 ## ビデオ
 * [ショートクリップ](https://youtu.be/NULt0lnuVFU)
@@ -44,6 +44,7 @@
 ## 和文解説
 メビウス・カライドサイクルについての和文解説は以下があります．
 * プレスリリース, [現代数学と折紙から生まれた新しい機構「メビウス・カライドサイクル」](https://www.kyushu-u.ac.jp/ja/researches/view/908)
+* プレスリリース, [任意個数の四面体に対してカライドサイクルの存在を数学的に証明](https://www.kyoto-u.ac.jp/ja/research-news/2026-05-19-3)
 * 鍛冶静雄, [動く折り紙「カライドサイクル」をめぐる機構学と幾何学の出会い](https://www.math.kyoto-u.ac.jp/alumni/bulletin9/kaji.pdf), 京都大学数学教室同窓会誌, Vol 9, 2025
 * 鍛冶静雄,
   [ユークリッド空間への図形の配置と設計への応用](https://drive.google.com/file/d/1T9TYKBqkQ1LdtojkK5dp09Pkyl5XI_wF/view?usp=sharing)
@@ -59,8 +60,9 @@
 
 ## 論文や講演
 より学術的な記述は以下にあります．
-* 論文, Shizuo Kaji, Kenji Kajiwara, Shota Shigetomi
-[An explicit construction of Kaleidocycles](https://arxiv.org/abs/2308.04977)
+* 論文, Shizuo Kaji, Kenji Kajiwara, Shota Shigetomi,
+  [*An explicit construction of Kaleidocycles by elliptic theta functions*](https://doi.org/10.1111/sapm.70224),
+  Studies in Applied Mathematics, 156, no. 5 (2026): e70224, [arXiv:2308.04977](https://arxiv.org/abs/2308.04977)
 * 論文, Shizuo Kaji, Kenji Kajiwara, Hyeongki Park,
 [Linkage Mechanisms Governed by Integrable Deformations of Discrete Space Curves](https://arxiv.org/abs/1903.06360), in Nonlinear Systems and Their Remarkable Mathematical Structures, Volume 2, pp 356--381, CRC Press, 2019
 <!-- * 講演スライド(日本語) [Kaleidocycle](https://www.math.kyoto-u.ac.jp/~kaji/papers/ShapeDesign.pdf), 13 Mar. 2021

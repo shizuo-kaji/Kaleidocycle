@@ -43,7 +43,8 @@ and export functions for paper templates and motion studies.
 ## References & Further Reading
 ### Technical publications
 - Shizuo Kaji, Kenji Kajiwara, Shota Shigetomi,
-  [*An explicit construction of Kaleidocycles*](https://arxiv.org/abs/2308.04977)
+  [*An explicit construction of Kaleidocycles by elliptic theta functions*](https://doi.org/10.1111/sapm.70224),
+  Studies in Applied Mathematics, 156, no. 5 (2026): e70224, [arXiv:2308.04977](https://arxiv.org/abs/2308.04977)
 - Shizuo Kaji, Kenji Kajiwara, Hyeongki Park,
   [*Linkage Mechanisms Governed by Integrable Deformations of Discrete Space Curves*](https://arxiv.org/abs/1903.06360),
   in *Nonlinear Systems and Their Remarkable Mathematical Structures*, Vol. 2,
@@ -65,6 +66,8 @@ and export functions for paper templates and motion studies.
 ### Japanese-language articles
 - プレスリリース:
   [現代数学と折紙から生まれた新しい機構「メビウス・カライドサイクル」](https://www.kyushu-u.ac.jp/ja/researches/view/908)
+- プレスリリース:
+  [任意個数の四面体に対してカライドサイクルの存在を数学的に証明](https://www.kyoto-u.ac.jp/ja/research-news/2026-05-19-3)
 - 鍛冶静雄, [動く折り紙「カライドサイクル」をめぐる機構学と幾何学の出会い](https://www.math.kyoto-u.ac.jp/alumni/bulletin9/kaji.pdf), 京都大学数学教室同窓会誌, Vol 9, 2025
 - 鍛冶静雄,
   [ユークリッド空間への図形の配置と設計への応用](https://drive.google.com/file/d/1T9TYKBqkQ1LdtojkK5dp09Pkyl5XI_wF/view?usp=sharing)

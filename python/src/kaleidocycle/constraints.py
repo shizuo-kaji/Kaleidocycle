@@ -8,25 +8,37 @@ from typing import Dict
 import numpy as np
 from numpy.typing import NDArray
 
-from .geometry import binormals_to_tangents, pairwise_curvature, curvature_recursion
+from .geometry import binormals_to_tangents, curvature_recursion, pairwise_curvature
 
 
 @dataclass(slots=True)
 class ConstraintConfig:
     """Configuration flags"""
 
-    slide: float = 0.0 # slide term for closure constraint
+    slide: float = 0.0  # slide term for closure constraint
     oriented: bool = False
-    enforce_anchors: bool = False # fix rigid motion by anchoring first two hinges
+    enforce_anchors: bool = False  # fix rigid motion by anchoring first two hinges
     constant_torsion: bool = True
-    alignment: bool = True # first and last hinge alignment
-    closure: bool = True # curve closure constraint
-    reference_torsion: float | None = None # reference value for constant torsion constraint
-    target_linking: float | None = None # target linking number for linking constraint
-    curvature_recursion: bool = False # curvature recursion constraint (u[i] - u[0] = 0)
+    alignment: bool = True  # first and last hinge alignment
+    closure: bool = True  # curve closure constraint
+    full_alignment: bool = False
+    # When True, alignment contributes the full 3-vector ``h[0] ∓ h[-1]``
+    # instead of a single scalar norm. The scalar version has rank-0
+    # Jacobian at the manifold, while the 3-vector version is rank-3,
+    # so it is required for Kutzbach-Grübler-style DoF counting and
+    # stationary-point analysis. Has no effect when ``alignment=False``.
+    reference_torsion: float | None = (
+        None  # reference value for constant torsion constraint
+    )
+    target_linking: float | None = None  # target linking number for linking constraint
+    curvature_recursion: bool = (
+        False  # curvature recursion constraint (u[i] - u[0] = 0)
+    )
 
 
-def enforce_terminal(hinges: NDArray[np.float64], oriented: bool) -> NDArray[np.float64]:
+def enforce_terminal(
+    hinges: NDArray[np.float64], oriented: bool
+) -> NDArray[np.float64]:
     """Ensure the final hinge repeats the first hinge."""
 
     if len(hinges) == 0:
@@ -36,8 +48,7 @@ def enforce_terminal(hinges: NDArray[np.float64], oriented: bool) -> NDArray[np.
     return hinges
 
 
-def anchor_residuals(
-    hinges: NDArray[np.float64]) -> NDArray[np.float64]:
+def anchor_residuals(hinges: NDArray[np.float64]) -> NDArray[np.float64]:
     """Residuals for the anchored hinges used to kill rigid motion."""
 
     first = np.array([0.0, 0.0, 1.0])
@@ -50,7 +61,7 @@ def anchor_residuals(
 def unit_norm_residuals(hinges: NDArray[np.float64]) -> NDArray[np.float64]:
     """‖h_i‖ - 1 for every hinge."""
 
-    return np.sum(hinges ** 2, axis=1) - 1.0
+    return np.sum(hinges**2, axis=1) - 1.0
 
 
 def closure_residual(
@@ -66,15 +77,35 @@ def closure_residual(
         ext = ext + slide * np.sum(hinges[:-1], axis=0)
     return ext
 
-def alignment_residuals(hinges: NDArray[np.float64], oriented=True) -> NDArray[np.float64]:
-        """Constraint: First and last hinge should match."""
-        if oriented:
-            return hinges[0] - hinges[-1]
-        else:
-            return hinges[0] + hinges[-1]
+
+def alignment_residuals(hinges: NDArray[np.float64], oriented=True) -> float:
+    """Norm of the first/last hinge alignment residual."""
+
+    if oriented:
+        residual = hinges[0] - hinges[-1]
+    else:
+        residual = hinges[0] + hinges[-1]
+    return float(np.linalg.norm(residual))
 
 
-def constant_torsion_residuals(hinges: NDArray[np.float64], reference: float = None) -> NDArray[np.float64]:
+def alignment_residuals_full(
+    hinges: NDArray[np.float64], oriented: bool = True
+) -> NDArray[np.float64]:
+    """Vector form of the first/last hinge alignment residual.
+
+    Returns the 3-component vector ``h[0] - h[-1]`` (oriented) or
+    ``h[0] + h[-1]`` (non-oriented). Unlike :func:`alignment_residuals`,
+    this version has full-rank (3) Jacobian at the manifold and is the
+    correct constraint for Kutzbach-Grübler-style DoF analysis.
+    """
+    if oriented:
+        return np.asarray(hinges[0] - hinges[-1], dtype=float)
+    return np.asarray(hinges[0] + hinges[-1], dtype=float)
+
+
+def constant_torsion_residuals(
+    hinges: NDArray[np.float64], reference: float = None
+) -> NDArray[np.float64]:
     """Enforce constant torsion angle: h_i · h_{i+1} = constant for all i.
 
     This is the InProd constraint from the Maple implementation.
@@ -93,13 +124,15 @@ def constant_torsion_residuals(hinges: NDArray[np.float64], reference: float = N
         return dot_products - reference
 
 
-def curvature_recursion_residuals(hinges: NDArray[np.float64], oriented: bool) -> NDArray[np.float64]:
+def curvature_recursion_residuals(
+    hinges: NDArray[np.float64], oriented: bool
+) -> NDArray[np.float64]:
     """Enforce curvature recursion values to be constant: u[i] - u[0] = 0.
 
     u is the residual vector from geometry.curvature_recursion.
     """
     if len(hinges) < 3:
-         return np.array([])
+        return np.array([])
 
     tangents = binormals_to_tangents(hinges, normalize=True)
     curvatures = pairwise_curvature(hinges, tangents, oriented=oriented)
@@ -117,18 +150,30 @@ def constraint_residuals(
 ) -> Dict[str, NDArray[np.float64]]:
     """Return all constraint residual groups for the given hinge array."""
 
-    #hinges = enforce_terminal(hinges, oriented=config.oriented)
+    # hinges = enforce_terminal(hinges, oriented=config.oriented)
     residuals: Dict[str, NDArray[np.float64]] = {}
     residuals["unit_norm"] = unit_norm_residuals(hinges[:-1])
-    residuals["closure"] = closure_residual(hinges, slide=config.slide)
+    if config.closure:
+        residuals["closure"] = closure_residual(hinges, slide=config.slide)
     if config.enforce_anchors:
         residuals["anchors"] = anchor_residuals(hinges)
     if config.constant_torsion:
-        residuals["constant_torsion"] = constant_torsion_residuals(hinges, reference=config.reference_torsion)
+        residuals["constant_torsion"] = constant_torsion_residuals(
+            hinges, reference=config.reference_torsion
+        )
     if config.alignment:
-        residuals["alignment"] = alignment_residuals(hinges, oriented=config.oriented)
+        if config.full_alignment:
+            residuals["alignment"] = alignment_residuals_full(
+                hinges, oriented=config.oriented
+            )
+        else:
+            residuals["alignment"] = np.asarray(
+                [alignment_residuals(hinges, oriented=config.oriented)], dtype=float
+            )
     if config.curvature_recursion:
-        residuals["curvature_recursion"] = curvature_recursion_residuals(hinges, oriented=config.oriented)
+        residuals["curvature_recursion"] = curvature_recursion_residuals(
+            hinges, oriented=config.oriented
+        )
     return residuals
 
 

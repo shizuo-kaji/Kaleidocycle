@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from kaleidocycle.theta import (
+    R1,
+    R3,
     alpha2,
     delta1,
     delta3,
@@ -18,11 +19,10 @@ from kaleidocycle.theta import (
     eY,
     eZ,
     generate_animation_theta,
+    generate_theta_binormals,
     generate_theta_curve,
     logarithmic_derivative_1,
     logarithmic_derivative_3,
-    R1,
-    R3,
     theta1,
     theta2,
     theta3,
@@ -304,7 +304,10 @@ def test_eK() -> None:
 
 def test_known_parameters() -> None:
     """Test with known good parameters from Maple code."""
-    # From Maple: vals := [v = 0.07227972073349694, r = 0.30353311936556515, y = 0.9155431292909612]
+    # From Maple:
+    # vals := [v = 0.07227972073349694,
+    #          r = 0.30353311936556515,
+    #          y = 0.9155431292909612]
     v = 0.072279720733
     z = 0.0
     r = 0.303533119366
@@ -322,3 +325,24 @@ def test_known_parameters() -> None:
     extent = np.linalg.norm(curve.max(axis=0) - curve.min(axis=0))
     assert extent > 0.1
     assert extent < 1000  # Not too large
+
+
+def test_generate_theta_binormals_uses_reference_formula_near_singular_g() -> None:
+    """Near zeros of G, high precision preserves Mathematica's Bx/By/Bz limit."""
+    # These closure parameters put G close to zero at several indices. The
+    # double-precision formula loses the removable cancellation unless the
+    # Mathematica reference formula is evaluated at higher precision.
+    v = 0.3421943650533442
+    z = 0.0
+    r = 0.288992977016361
+    y = 1.0265830951600325
+    n = 9
+
+    binormals = generate_theta_binormals(v, z, r, y, n, t=0.0)
+
+    assert binormals.shape == (n + 1, 3)
+    assert np.all(np.isfinite(binormals))
+    assert np.allclose(np.linalg.norm(binormals, axis=1), 1.0)
+
+    pairwise_cosines = np.sum(binormals[:-1] * binormals[1:], axis=1)
+    assert np.std(pairwise_cosines) < 1e-12

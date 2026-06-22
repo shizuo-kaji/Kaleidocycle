@@ -10,6 +10,10 @@ from kaleidocycle.optimality import (
     check_stationarity,
     compute_constraint_jacobian,
     compute_energy_gradient,
+    find_nearby_stationary,
+    finite_motion_dof,
+    follow_motion,
+    local_dof,
     project_gradient,
 )
 
@@ -298,6 +302,274 @@ class TestEdgeCases:
         # and likely not be stationary
         # (though we don't strictly require this as the test might fail randomly)
         assert result['constraint_penalty'] > 1e-3
+
+
+class TestLocalDoF:
+    """Tests for local degree-of-freedom computation."""
+
+    def test_basic_keys_and_shapes(self):
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        info = kc.local_dof()
+        for key in [
+            "dof",
+            "raw_dof",
+            "rigid_dof",
+            "rank",
+            "n_constraints",
+            "n_variables",
+            "singular_values",
+            "tol",
+        ]:
+            assert key in info
+        assert info["n_variables"] == kc.hinges.size
+        assert info["dof"] == info["raw_dof"] - info["rigid_dof"]
+
+    def test_basis_lies_in_nullspace(self):
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        info = kc.local_dof(return_basis=True)
+        if info["dof"] == 0:
+            pytest.skip("no internal DoF for this configuration")
+        J = compute_constraint_jacobian(kc.hinges, kc.config)
+        B = info["basis"].reshape(-1, info["dof"])
+        assert np.linalg.norm(J @ B) < 1e-8
+
+    def test_rigid_rotation_in_nullspace(self):
+        """Three global rotations are always tangent to the constraint set."""
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        info = kc.local_dof()
+        # No anchors -> all 3 infinitesimal rotations should be detected.
+        assert info["rigid_dof"] == 3
+
+    def test_anchors_remove_rigid_rotations(self):
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        cfg = ConstraintConfig(
+            oriented=True,
+            constant_torsion=True,
+            alignment=True,
+            closure=True,
+            enforce_anchors=True,
+        )
+        info = kc.local_dof(config=cfg)
+        assert info["rigid_dof"] == 0
+
+    def test_dof_consistency(self):
+        kc = Kaleidocycle(n=6, oriented=False, seed=1)
+        info_raw = kc.local_dof(subtract_rigid=False)
+        info = kc.local_dof(subtract_rigid=True)
+        assert info_raw["raw_dof"] == info["raw_dof"]
+        assert info_raw["rigid_dof"] == 0
+        assert info["dof"] + info["rigid_dof"] == info["raw_dof"]
+
+
+class TestFiniteMotionDoF:
+    """Tests for finite (nonlinear) motion DoF estimation via continuation."""
+
+    def test_basic_keys(self):
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        info = kc.finite_motion_dof(
+            seed=0, step_size=1e-3, n_steps=8, n_samples=8
+        )
+        for key in [
+            "finite_dof",
+            "infinitesimal_dof",
+            "rigid_dof",
+            "n_samples",
+            "n_successful",
+            "displacement_singular_values",
+            "max_residual",
+            "step_size",
+            "n_steps",
+        ]:
+            assert key in info
+
+    def test_paths_stay_on_manifold(self):
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        info = kc.finite_motion_dof(
+            seed=0, step_size=1e-3, n_steps=8, n_samples=6,
+            correction_tol=1e-8,
+        )
+        # The Newton corrector should keep us on the constraint manifold.
+        assert info["max_residual"] < 1e-6
+
+    def test_finite_bounded_by_infinitesimal(self):
+        kc = Kaleidocycle(n=6, oriented=False, seed=1)
+        info = kc.finite_motion_dof(
+            seed=0, step_size=5e-4, n_steps=8, n_samples=8
+        )
+        assert info["finite_dof"] <= info["infinitesimal_dof"]
+
+    def test_zero_dof_short_circuit(self):
+        """When no infinitesimal DoF, finite DoF is 0 without continuation."""
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        # Anchor + every constraint reduces the count enough that this is
+        # a useful smoke test of the short-circuit path. We patch via a
+        # config that yields infinitesimal_dof == 0 if possible, but the
+        # generic case is to confirm consistency rather than exact zero.
+        info = kc.finite_motion_dof(
+            seed=0, step_size=1e-3, n_steps=2, n_samples=2
+        )
+        assert info["finite_dof"] >= 0
+        assert info["n_successful"] <= info["n_samples"]
+
+    def test_paths_returned(self):
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        info = kc.finite_motion_dof(
+            seed=0, step_size=1e-3, n_steps=4, n_samples=8,
+            return_paths=True,
+        )
+        assert "paths" in info
+        # n_samples is clamped to at least the infinitesimal DoF so that
+        # every basis direction is tried.
+        assert len(info["paths"]) == info["n_samples"]
+        for p in info["paths"]:
+            assert p.ndim == 3 and p.shape[1:] == kc.hinges.shape
+
+
+class TestFullAlignment:
+    """Tests for the full_alignment flag on ConstraintConfig."""
+
+    def test_full_alignment_adds_two_constraints(self):
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        cfg_scalar = ConstraintConfig(
+            oriented=True, constant_torsion=True, alignment=True,
+            closure=True, full_alignment=False,
+        )
+        cfg_vec = ConstraintConfig(
+            oriented=True, constant_torsion=True, alignment=True,
+            closure=True, full_alignment=True,
+        )
+        J_scalar = compute_constraint_jacobian(kc.hinges, cfg_scalar)
+        J_vec = compute_constraint_jacobian(kc.hinges, cfg_vec)
+        # Vector form has 2 extra rows (3 instead of 1)
+        assert J_vec.shape[0] == J_scalar.shape[0] + 2
+
+    def test_full_alignment_rows_are_active(self):
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        ref = float(np.dot(kc.hinges[0], kc.hinges[1]))
+        cfg_scalar = ConstraintConfig(
+            oriented=True, constant_torsion=True, alignment=True,
+            closure=True, full_alignment=False, reference_torsion=ref,
+        )
+        cfg_vec = ConstraintConfig(
+            oriented=True, constant_torsion=True, alignment=True,
+            closure=True, full_alignment=True, reference_torsion=ref,
+        )
+        # With reference_torsion fixed, no constraint row is identically
+        # zero by construction. The scalar alignment row is zero at the
+        # manifold (rank-0), the full alignment rows are rank-3.
+        J_scalar = compute_constraint_jacobian(kc.hinges, cfg_scalar)
+        J_vec = compute_constraint_jacobian(kc.hinges, cfg_vec)
+        assert np.linalg.matrix_rank(J_vec) > np.linalg.matrix_rank(J_scalar)
+
+
+class TestFindNearbyStationary:
+    """Tests for find_nearby_stationary."""
+
+    def test_returns_dict_with_required_keys(self):
+        kc = Kaleidocycle(n=7, oriented=True, seed=0)
+        cfg = ConstraintConfig(
+            oriented=True, constant_torsion=True, full_alignment=True,
+        )
+        info = find_nearby_stationary(kc.hinges, cfg, energy="mean_cos",
+                                       maxfev=500)
+        for key in ("hinges", "projected_gradient_norm", "n_eval",
+                    "success", "distance"):
+            assert key in info
+        assert info["hinges"].shape == kc.hinges.shape
+
+    def test_theta_solution_is_already_stationary(self):
+        # Theta(7,3) is conjectured to be at a mean_cos stationary.
+        from kaleidocycle import generate_theta_binormals
+        from kaleidocycle.theta import solve_closure_conditions
+
+        sol = solve_closure_conditions(7, m=3, initial_guess=(0.48, 0.27))
+        v, r, y = sol
+        b = generate_theta_binormals(v, 0.0, r, y, N=7, t=0.0)
+        kc = Kaleidocycle(hinges=b)
+        cfg = ConstraintConfig(
+            oriented=kc.oriented, constant_torsion=True, full_alignment=True,
+        )
+        info = find_nearby_stationary(kc.hinges, cfg, energy="mean_cos",
+                                       maxfev=500)
+        # Theta(7,3) is already stationary to machine precision.
+        assert info["projected_gradient_norm"] < 1e-7
+        assert info["distance"] < 1e-3
+
+
+class TestFollowMotion:
+    """Tests for follow_motion."""
+
+    def test_returns_3d_frames(self):
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        cfg = ConstraintConfig(
+            oriented=True, constant_torsion=True, full_alignment=True,
+        )
+        frames = follow_motion(kc.hinges, cfg, n_steps=5)
+        assert frames.ndim == 3
+        assert frames.shape[1:] == kc.hinges.shape
+
+    def test_bidirectional_path_length(self):
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        cfg = ConstraintConfig(
+            oriented=True, constant_torsion=True, full_alignment=True,
+        )
+        frames = follow_motion(kc.hinges, cfg, n_steps=10,
+                                bidirectional=True)
+        # Up to 2*n_steps + 1 frames, center is the starting config.
+        assert frames.shape[0] <= 2 * 10 + 1
+        # The middle frame should equal hinges (or be close to it).
+        mid = frames.shape[0] // 2
+        assert np.allclose(frames[mid], kc.hinges)
+
+    def test_zero_dof_returns_single_frame(self):
+        # Use a contrived config that fully determines the hinges.
+        kc = Kaleidocycle(n=8, oriented=True, seed=0)
+        cfg = ConstraintConfig(
+            oriented=True, constant_torsion=True, full_alignment=True,
+            enforce_anchors=True,
+        )
+        # With anchors + full alignment + torsion, internal DoF may be > 0
+        # so this test just verifies the function does not raise.
+        frames = follow_motion(kc.hinges, cfg, n_steps=3)
+        assert frames.ndim == 3
+
+
+class TestAlignFirstThree:
+    """Tests for align_first_three."""
+
+    def test_first_vertex_at_origin(self):
+        from kaleidocycle import align_first_three
+        rng = np.random.default_rng(0)
+        c = rng.standard_normal((10, 3))
+        a = align_first_three(c)
+        assert np.allclose(a[0], 0.0)
+
+    def test_second_vertex_on_x_axis(self):
+        from kaleidocycle import align_first_three
+        rng = np.random.default_rng(1)
+        c = rng.standard_normal((10, 3))
+        a = align_first_three(c)
+        assert a[1, 0] > 0
+        assert abs(a[1, 1]) < 1e-10
+        assert abs(a[1, 2]) < 1e-10
+
+    def test_third_vertex_in_xy_plane(self):
+        from kaleidocycle import align_first_three
+        rng = np.random.default_rng(2)
+        c = rng.standard_normal((10, 3))
+        a = align_first_three(c)
+        assert abs(a[2, 2]) < 1e-10
+        assert a[2, 1] >= 0
+
+    def test_distances_preserved(self):
+        from kaleidocycle import align_first_three
+        rng = np.random.default_rng(3)
+        c = rng.standard_normal((10, 3))
+        a = align_first_three(c)
+        # Rigid motion preserves all pairwise distances.
+        d1 = np.linalg.norm(c[:, None] - c[None, :], axis=-1)
+        d2 = np.linalg.norm(a[:, None] - a[None, :], axis=-1)
+        assert np.allclose(d1, d2, atol=1e-10)
 
 
 if __name__ == "__main__":

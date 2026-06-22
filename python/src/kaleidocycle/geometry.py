@@ -70,8 +70,13 @@ class Kaleidocycle:
             tangents: Tangent vectors, shape (n, 3)
             normals: Normal vectors (currently not implemented), shape (n, 3)
             seed: Random seed for initialization (only used when n is provided)
-            solver_options: Optional dict with solver parameters when creating from n
-                           (e.g., {"maxiter": 1000, "use_constraint_solver": True})
+            solver_options: Optional dict with solver parameters when creating from n.
+                           Special option: {"mode": "random_feasible"} creates a generic
+                           feasible configuration via random initialization + Newton projection
+                           instead of optimization.
+                           Other options for random_feasible mode: max_iter, max_attempts, tol,
+                           finite_diff_step, backend.
+                           For optimized mode: maxiter, use_constraint_solver, etc.
 
         Raises:
             ValueError: If none or multiple initialization parameters are provided
@@ -79,8 +84,13 @@ class Kaleidocycle:
 
         Examples:
             Create optimized kaleidocycle from n:
-            >>> kc = Kaleidocycle(9)  # Creates oriented kaleidocycle with 9 tetrahedra
+            >>> kc = Kaleidocycle(9)  # Creates optimized kaleidocycle with 9 tetrahedra
             >>> kc = Kaleidocycle(8, oriented=False)  # Creates non-oriented with 8
+
+            Create random feasible kaleidocycle (generic constraint manifold point):
+            >>> kc = Kaleidocycle(10, oriented=False, solver_options={"mode": "random_feasible"}, seed=42)
+            >>> kc.local_dof()['dof']  # Should be N - 6 for generic point
+            4
 
             Create from existing data:
             >>> kc = Kaleidocycle(hinges=hinges_array)
@@ -113,7 +123,7 @@ class Kaleidocycle:
         # Initialize metadata dictionary
         self.metadata: dict[str, any] = {}
 
-        # Initialize from n by creating optimized kaleidocycle
+        # Initialize from n by creating optimized or random feasible kaleidocycle
         if n is not None:
             if not isinstance(n, int) or n < 3:
                 raise ValueError(f"n must be an integer >= 3, got {n}")
@@ -123,8 +133,18 @@ class Kaleidocycle:
                 oriented = False
             self.oriented = oriented
 
-            # Create optimized kaleidocycle
-            self.hinges = self._create_optimized(n, oriented, seed, solver_options, config=self.config)
+            # Check if random_feasible mode is requested
+            mode = solver_options.get("mode", "optimize") if solver_options else "optimize"
+
+            if mode == "random_feasible":
+                # Create random feasible kaleidocycle via Newton projection
+                self.hinges = self._create_random_feasible(n, oriented, seed, solver_options)
+                self.metadata: dict[str, any] = {"created_from": "random_feasible"}
+            else:
+                # Create optimized kaleidocycle
+                self.hinges = self._create_optimized(n, oriented, seed, solver_options, config=self.config)
+                self.metadata: dict[str, any] = {"created_from": "optimize_cycle"}
+
             self.n = n
             self.oriented = oriented
 
@@ -134,7 +154,6 @@ class Kaleidocycle:
             self._normals: np.ndarray | None = None
             self._curvatures: np.ndarray | None = None
             self._cosines: np.ndarray | None = None
-            self.metadata: dict[str, any] = {"created_from": "optimize_cycle"}
             return
 
         # Initialize from the provided parameter
@@ -170,6 +189,87 @@ class Kaleidocycle:
         else:
             self.oriented = oriented
 
+
+    @staticmethod
+    def _create_random_feasible(
+        n: int,
+        oriented: bool,
+        seed: int | None,
+        solver_options: dict | None,
+    ) -> np.ndarray:
+        """Create a random feasible kaleidocycle via Newton projection.
+
+        Generates a generic feasible configuration by randomly sampling unit hinges
+        and Newton-projecting onto the constraint manifold. This produces a smooth
+        point of the constraint variety without optimizing any specific energy.
+
+        Args:
+            n: Number of tetrahedra
+            oriented: Whether kaleidocycle is oriented
+            seed: Random seed for reproducibility
+            solver_options: Dict with optional keys:
+                - max_iter: Maximum Newton iterations per attempt (default 400)
+                - max_attempts: Number of random initializations to try (default 8)
+                - tol: Convergence tolerance (default 1e-9)
+                - finite_diff_step: Finite difference step size (default 1e-8)
+                - backend: "jax" or "numpy" (default "jax")
+
+        Returns:
+            Hinges array at a generic feasible configuration, shape (n+1, 3)
+
+        Raises:
+            RuntimeError: If projection fails after max_attempts
+        """
+        from .constraints import ConstraintConfig
+        from .optimality import _newton_correct
+
+        # Extract options
+        opts = solver_options or {}
+        max_iter = opts.get("max_iter", 400)
+        max_attempts = opts.get("max_attempts", 8)
+        tol = opts.get("tol", 1e-9)
+        finite_diff_step = opts.get("finite_diff_step", 1e-8)
+        backend = opts.get("backend", "jax")
+
+        rng = np.random.default_rng(seed)
+
+        # Initial random hinges
+        raw = rng.standard_normal((n + 1, 3))
+        raw = raw / np.linalg.norm(raw, axis=1, keepdims=True)
+        raw[-1] = raw[0] if oriented else -raw[0]
+
+        # Configuration with full alignment
+        cfg = ConstraintConfig(
+            oriented=oriented,
+            constant_torsion=True,
+            alignment=True,
+            closure=True,
+            full_alignment=True,
+        )
+
+        # Try projection with multiple random initializations
+        for attempt in range(max_attempts):
+            h_proj = _newton_correct(
+                raw,
+                cfg,
+                tol=tol,
+                max_iter=max_iter,
+                finite_diff_step=finite_diff_step,
+                backend=backend,
+            )
+            if h_proj is not None:
+                return h_proj
+
+            # Generate new random initialization
+            rng2 = np.random.default_rng(rng.integers(1 << 30))
+            raw = rng2.standard_normal((n + 1, 3))
+            raw = raw / np.linalg.norm(raw, axis=1, keepdims=True)
+            raw[-1] = raw[0] if oriented else -raw[0]
+
+        raise RuntimeError(
+            f"Could not project random hinges onto constraint manifold "
+            f"after {max_attempts} attempts"
+        )
 
     @staticmethod
     def _create_optimized(
@@ -651,6 +751,221 @@ class Kaleidocycle:
             finite_diff_step=finite_diff_step,
         )
 
+    def local_dof(
+        self,
+        config: 'ConstraintConfig | None' = None,
+        *,
+        tol: float | None = None,
+        return_basis: bool = False,
+        subtract_rigid: bool = True,
+        finite_diff_step: float = 1e-8,
+        backend: str | None = None,
+    ) -> dict:
+        """Compute the local DoF of constraint-preserving motions.
+
+        The constraint manifold M = {h : g(h) = 0} has tangent space
+        ker(J) at the current hinge configuration, where J is the
+        constraint Jacobian. This method returns dim(ker J) — by default
+        with the three global rigid rotations quotiented out, since those
+        always preserve every constraint and are usually treated as
+        gauge.
+
+        Args:
+            config: Constraint configuration. If None, uses ``self.config``.
+            tol: Singular-value cutoff for rank determination. None lets
+                NumPy choose ``max(J.shape) * eps * max_sv``.
+            return_basis: If True, return an orthonormal basis of the
+                tangent space with shape ``(n+1, 3, dof)`` under the
+                ``"basis"`` key.
+            subtract_rigid: If True (default), subtract the dimension of
+                global rigid rotations contained in the nullspace.
+            finite_diff_step: Step size for the NumPy backend Jacobian.
+            backend: Backend selector (``"numpy"`` or ``"jax"``).
+
+        Returns:
+            Dictionary with keys ``dof`` (post-quotient DoF), ``raw_dof``
+            (nullspace dimension), ``rigid_dof`` (rigid directions
+            removed), ``rank``, ``n_constraints``, ``n_variables``,
+            ``singular_values``, ``tol``, and optionally ``basis``.
+
+        Example:
+            >>> from kaleidocycle import Kaleidocycle
+            >>> kc = Kaleidocycle(n=8, oriented=True)
+            >>> info = kc.local_dof()
+            >>> info['dof']  # one-parameter family of motions
+            1
+        """
+        from .optimality import local_dof
+
+        if config is None:
+            config = self.config
+
+        return local_dof(
+            self.hinges,
+            config,
+            tol=tol,
+            return_basis=return_basis,
+            subtract_rigid=subtract_rigid,
+            finite_diff_step=finite_diff_step,
+            backend=backend,
+        )
+
+    def finite_motion_dof(
+        self,
+        config: 'ConstraintConfig | None' = None,
+        *,
+        step_size: float = 1e-3,
+        n_steps: int = 20,
+        n_samples: int | None = None,
+        correction_tol: float = 1e-8,
+        max_newton_iter: int = 50,
+        subtract_rigid: bool = True,
+        rank_tol: float = 1e-3,
+        nullspace_tol: float | None = None,
+        seed: int | None = None,
+        return_paths: bool = False,
+        finite_diff_step: float = 1e-8,
+        backend: str | None = None,
+    ) -> dict:
+        """Estimate finite (nonlinear) motion DoF via continuation.
+
+        Complements :meth:`local_dof`. Infinitesimal DoF counts the
+        dimension of ``ker(J)`` (overcounts at singular points), while
+        finite DoF measures the dimension of the constraint variety that
+        is reachable by actual paths from the current configuration. See
+        :func:`kaleidocycle.optimality.finite_motion_dof` for details on
+        all keyword arguments.
+
+        Args:
+            config: Constraint configuration. If None, uses ``self.config``.
+            step_size: Predictor step size.
+            n_steps: Number of predictor-corrector steps per sample.
+            n_samples: Number of tangent directions to try (defaults to
+                ``max(2k, 8)`` where ``k`` is the infinitesimal DoF).
+            correction_tol: Newton-corrector residual tolerance.
+            max_newton_iter: Maximum Newton iterations per corrector.
+            subtract_rigid: If True, exclude global rigid rotations.
+            rank_tol: Relative SVD cutoff for the displacement matrix.
+            seed: RNG seed for random direction sampling.
+            return_paths: If True, include continuation paths.
+            finite_diff_step: Step size for the NumPy-backend Jacobian.
+            backend: Backend selector.
+
+        Returns:
+            Dictionary with ``finite_dof``, ``infinitesimal_dof``,
+            ``rigid_dof``, sample counts, ``displacement_singular_values``,
+            ``max_residual``, continuation parameters, and optionally
+            ``paths``.
+
+        Example:
+            >>> from kaleidocycle import Kaleidocycle
+            >>> kc = Kaleidocycle(n=8, oriented=True)
+            >>> kc.finite_motion_dof(seed=0)["finite_dof"]
+            1
+        """
+        from .optimality import finite_motion_dof
+
+        if config is None:
+            config = self.config
+
+        return finite_motion_dof(
+            self.hinges,
+            config,
+            step_size=step_size,
+            n_steps=n_steps,
+            n_samples=n_samples,
+            correction_tol=correction_tol,
+            max_newton_iter=max_newton_iter,
+            subtract_rigid=subtract_rigid,
+            rank_tol=rank_tol,
+            nullspace_tol=nullspace_tol,
+            seed=seed,
+            return_paths=return_paths,
+            finite_diff_step=finite_diff_step,
+            backend=backend,
+        )
+
+    def find_nearby_stationary(
+        self,
+        energy: 'Literal["bending", "mean_cos"]' = "mean_cos",
+        config: 'ConstraintConfig | None' = None,
+        *,
+        tol: float = 1e-10,
+        maxfev: int = 2000,
+        correction_tol: float = 1e-8,
+        max_newton_iter: int = 100,
+        finite_diff_step: float = 1e-8,
+        backend: str | None = None,
+    ) -> 'Kaleidocycle':
+        """Return a new Kaleidocycle at the nearest critical point of ``energy``.
+
+        Wraps :func:`kaleidocycle.optimality.find_nearby_stationary`. The
+        returned ``Kaleidocycle`` carries a ``stationary_info`` attribute on
+        its ``metadata`` dict with the residual norm, iteration count, and
+        Euclidean distance from this configuration.
+
+        For the projected gradient to actually vanish you must use a
+        configuration with ``full_alignment=True``; the default scalar
+        alignment leaves a permanent residual.
+        """
+        from .optimality import find_nearby_stationary
+
+        if config is None:
+            config = self.config
+
+        info = find_nearby_stationary(
+            self.hinges, config, energy,
+            tol=tol, maxfev=maxfev,
+            correction_tol=correction_tol, max_newton_iter=max_newton_iter,
+            finite_diff_step=finite_diff_step, backend=backend,
+        )
+        new_kc = Kaleidocycle(hinges=info["hinges"], oriented=self.oriented)
+        new_kc.metadata["stationary_info"] = {
+            "projected_gradient_norm": info["projected_gradient_norm"],
+            "n_eval": info["n_eval"],
+            "success": info["success"],
+            "distance": info["distance"],
+            "energy": energy,
+        }
+        return new_kc
+
+    def follow_motion(
+        self,
+        config: 'ConstraintConfig | None' = None,
+        *,
+        direction_index: int = 0,
+        step_size: float = 5e-4,
+        n_steps: int = 80,
+        bidirectional: bool = True,
+        correction_tol: float = 1e-8,
+        max_newton_iter: int = 50,
+        subtract_rigid: bool = True,
+        nullspace_tol: float | None = None,
+        finite_diff_step: float = 1e-8,
+        backend: str | None = None,
+    ) -> np.ndarray:
+        """Continue along one tangent direction and return the path of hinge frames.
+
+        Wraps :func:`kaleidocycle.optimality.follow_motion`. See that
+        function for parameter semantics. Returns an array of shape
+        ``(n_frames, n+1, 3)``.
+        """
+        from .optimality import follow_motion
+
+        if config is None:
+            config = self.config
+
+        return follow_motion(
+            self.hinges, config,
+            direction_index=direction_index,
+            step_size=step_size, n_steps=n_steps,
+            bidirectional=bidirectional,
+            correction_tol=correction_tol, max_newton_iter=max_newton_iter,
+            subtract_rigid=subtract_rigid,
+            nullspace_tol=nullspace_tol,
+            finite_diff_step=finite_diff_step, backend=backend,
+        )
+
     def report(
         self,
         config: 'ConstraintConfig | None' = None,
@@ -857,6 +1172,71 @@ def tangents_to_curve(
         points = points - centroid
 
     return points
+
+
+def align_first_three(curve: np.ndarray) -> np.ndarray:
+    """Rigidly align a curve so the first three vertices are fixed.
+
+    After alignment:
+
+    - ``curve[0]`` is the origin,
+    - ``curve[1]`` lies on the positive ``x``-axis,
+    - ``curve[2]`` sits in the ``xy``-plane with ``y >= 0``.
+
+    This removes the entire 6-dim rigid-motion group (3 translation +
+    3 rotation), making it convenient to visualize trajectories along
+    a finite motion without rigid drift contaminating the picture.
+
+    Parameters
+    ----------
+    curve : np.ndarray
+        Array of shape ``(n_pts, 3)``.
+
+    Returns
+    -------
+    np.ndarray
+        Aligned copy of ``curve``, same shape.
+    """
+    c = np.asarray(curve, dtype=float)
+    if c.ndim != 2 or c.shape[1] != 3 or c.shape[0] < 3:
+        raise ValueError(
+            f"expected (n_pts>=3, 3) curve, got shape {c.shape}"
+        )
+    c = c - c[0]
+
+    v1 = c[1]
+    n1 = float(np.linalg.norm(v1))
+    if n1 < 1e-12:
+        return c
+    e = v1 / n1
+    target = np.array([1.0, 0.0, 0.0])
+    axis = np.cross(e, target)
+    sin_a = float(np.linalg.norm(axis))
+    cos_a = float(np.dot(e, target))
+    if sin_a < 1e-12:
+        R1 = np.eye(3) if cos_a > 0 else np.diag([-1.0, -1.0, 1.0])
+    else:
+        axis = axis / sin_a
+        K = np.array([
+            [0.0, -axis[2], axis[1]],
+            [axis[2], 0.0, -axis[0]],
+            [-axis[1], axis[0], 0.0],
+        ])
+        R1 = np.eye(3) + sin_a * K + (1.0 - cos_a) * (K @ K)
+    c = c @ R1.T
+
+    y, z = c[2, 1], c[2, 2]
+    r = float(np.hypot(y, z))
+    if r >= 1e-12:
+        cos_b = y / r
+        sin_b = -z / r
+        R2 = np.array([
+            [1.0, 0.0, 0.0],
+            [0.0, cos_b, -sin_b],
+            [0.0, sin_b, cos_b],
+        ])
+        c = c @ R2.T
+    return c
 
 
 def binormals_to_curve(

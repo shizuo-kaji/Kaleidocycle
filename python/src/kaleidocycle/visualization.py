@@ -825,6 +825,133 @@ def create_rotation_animation(
     return fig, anim
 
 
+def plot_vertex_trajectories(
+    frames: np.ndarray,
+    *,
+    vertex_indices: list[int] | None = None,
+    ax: 'Axes | None' = None,
+    title: str | None = None,
+    show_central_frame: bool = True,
+    mark_fixed: bool = True,
+    linewidth: float = 1.2,
+):
+    """Plot trajectories of selected curve vertices along a motion.
+
+    For each hinge frame in ``frames`` the corresponding curve is computed
+    via :func:`kaleidocycle.geometry.binormals_to_curve` and rigidly
+    aligned via :func:`kaleidocycle.geometry.align_first_three` so the
+    first three vertices are fixed. Trajectories of the remaining vertices
+    are then plotted in 3-D — clean 1-D curves indicate the configuration
+    has a true single-parameter finite motion.
+
+    Parameters
+    ----------
+    frames : np.ndarray
+        Array of hinge frames, shape ``(n_frames, n+1, 3)`` such as
+        produced by :func:`kaleidocycle.optimality.follow_motion`.
+    vertex_indices : list of int, optional
+        Which curve vertices to plot. Defaults to all vertices except
+        the three pinned ones (indices 0, 1, 2).
+    ax : matplotlib 3D axes, optional
+        Axes to draw onto; if ``None`` a new figure is created.
+    title : str, optional
+        Axes title.
+    show_central_frame : bool, default True
+        If True, draw the central (mid-index) curve in black for context.
+    mark_fixed : bool, default True
+        If True, draw markers on the three pinned vertices.
+    linewidth : float, default 1.2
+        Trajectory line width.
+
+    Returns
+    -------
+    ax : matplotlib 3D axes
+    curves : np.ndarray
+        Aligned curves, shape ``(n_frames, n+1, 3)``.
+    """
+    import matplotlib.pyplot as plt
+
+    from .geometry import align_first_three, binormals_to_curve
+
+    frames_arr = np.asarray(frames)
+    if frames_arr.ndim != 3 or frames_arr.shape[2] != 3:
+        raise ValueError(
+            f"expected (n_frames, n+1, 3) frames, got shape {frames_arr.shape}"
+        )
+
+    curves = np.array([
+        align_first_three(binormals_to_curve(h, center=False))
+        for h in frames_arr
+    ])
+    n_pts = curves.shape[1]
+
+    if vertex_indices is None:
+        vertex_indices = list(range(3, n_pts))
+
+    if ax is None:
+        fig = plt.figure(figsize=(7, 6))
+        ax = fig.add_subplot(111, projection="3d")
+
+    cmap = plt.get_cmap("tab10")
+    for k, v in enumerate(vertex_indices):
+        traj = curves[:, v, :]
+        ax.plot(traj[:, 0], traj[:, 1], traj[:, 2],
+                "-", color=cmap(k % 10), lw=linewidth, label=f"v{v}")
+        ax.scatter(traj[0, 0], traj[0, 1], traj[0, 2],
+                   color=cmap(k % 10), s=20, marker="o")
+        ax.scatter(traj[-1, 0], traj[-1, 1], traj[-1, 2],
+                   color=cmap(k % 10), s=30, marker="s")
+
+    mid = curves[curves.shape[0] // 2]
+    if show_central_frame:
+        ax.plot(mid[:, 0], mid[:, 1], mid[:, 2],
+                "k-", lw=0.6, alpha=0.5, label="central frame")
+    if mark_fixed:
+        ax.scatter(*mid[0], color="black", marker="X", s=80, label="v0")
+        ax.scatter(*mid[1], color="red",   marker="X", s=60, label="v1")
+        ax.scatter(*mid[2], color="blue",  marker="X", s=60, label="v2")
+
+    ax.set_xlabel("x"); ax.set_ylabel("y"); ax.set_zlabel("z")
+    if title:
+        ax.set_title(title)
+    ax.legend(loc="upper left", fontsize=7, ncol=2)
+    return ax, curves
+
+
+def trajectory_dimensionality(curves: np.ndarray) -> dict:
+    """Per-vertex σ₂/σ₁ ratio of the centered trajectory SVD.
+
+    ``curves`` is the aligned trajectory array returned by
+    :func:`plot_vertex_trajectories`. For a single-parameter motion every
+    free vertex traces a 1-D curve, so σ₂/σ₁ should be small.
+
+    Returns a dict with ``ratios`` (mapping vertex index → σ₂/σ₁),
+    ``mean``, ``max``, ``min`` over the free vertices.
+    """
+    arr = np.asarray(curves, dtype=float)
+    if arr.ndim != 3 or arr.shape[2] != 3:
+        raise ValueError(
+            f"expected (n_frames, n+1, 3) curves, got shape {arr.shape}"
+        )
+    n_pts = arr.shape[1]
+    ratios: dict[int, float] = {}
+    for v in range(3, n_pts):
+        traj = arr[:, v, :] - arr[:, v, :].mean(axis=0)
+        s = np.linalg.svd(traj, compute_uv=False)
+        if s[0] > 0:
+            ratios[v] = float(s[1] / s[0])
+    if not ratios:
+        return {"ratios": {}, "mean": float("nan"), "max": float("nan"),
+                "min": float("nan")}
+    vals = np.array(list(ratios.values()))
+    return {
+        "ratios": ratios,
+        "mean": float(vals.mean()),
+        "max": float(vals.max()),
+        "min": float(vals.min()),
+    }
+
+
 def _set_equal_aspect_3d(ax: Axes, points: np.ndarray) -> None:
     """Set equal aspect ratio for 3D plots.
 

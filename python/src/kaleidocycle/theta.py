@@ -35,7 +35,7 @@ def _jtheta1(z: complex | NDArray, q: complex) -> complex | NDArray:
 
     for n in range(max_terms):
         term_power = (n + 0.5) ** 2
-        term = (-1) ** n * (q ** term_power) * np.sin((2 * n + 1) * z)
+        term = (-1) ** n * (q**term_power) * np.sin((2 * n + 1) * z)
 
         result += term
 
@@ -67,7 +67,7 @@ def _jtheta2(z: complex | NDArray, q: complex) -> complex | NDArray:
 
     for n in range(max_terms):
         term_power = (n + 0.5) ** 2
-        term = (q ** term_power) * np.cos((2 * n + 1) * z)
+        term = (q**term_power) * np.cos((2 * n + 1) * z)
 
         result += term
 
@@ -421,17 +421,10 @@ def f_wave(v: float, n: int, z: float, r: float, y: float, t: float) -> complex:
     c = eC(v, r, y)
     gam = Gamma(r, y, 1)
 
-    exp_term = np.exp(
-        (n + 0.5) * d3 / (d3 - d1) * z + c * t * z / 2 - gam * 1j * t / 2
-    )
+    exp_term = np.exp((n + 0.5) * d3 / (d3 - d1) * z + c * t * z / 2 - gam * 1j * t / 2)
     th_arg = 1j * v * n + z / (d3 - d1) + r + 1j * t
 
-    return (
-        theta3(-0.5j * v + r, y)
-        * R3(v, r, y) ** n
-        * exp_term
-        * theta2(th_arg, y)
-    )
+    return theta3(-0.5j * v + r, y) * R3(v, r, y) ** n * exp_term * theta2(th_arg, y)
 
 
 def g_wave(v: float, n: int, z: float, r: float, y: float, t: float) -> complex:
@@ -456,17 +449,10 @@ def g_wave(v: float, n: int, z: float, r: float, y: float, t: float) -> complex:
     c = eC(v, r, y)
     gam = Gamma(r, y, 1)
 
-    exp_term = np.exp(
-        (n + 0.5) * d3 / (d3 - d1) * z + c * t * z / 2 + gam * 1j * t / 2
-    )
+    exp_term = np.exp((n + 0.5) * d3 / (d3 - d1) * z + c * t * z / 2 + gam * 1j * t / 2)
     th_arg = 1j * v * n + z / (d3 - d1) - r + 1j * t
 
-    return (
-        theta1(0.5j * v + r, y)
-        * R1(v, r, y) ** (-n)
-        * exp_term
-        * theta4(th_arg, y)
-    )
+    return theta1(0.5j * v + r, y) * R1(v, r, y) ** (-n) * exp_term * theta4(th_arg, y)
 
 
 def G_func(v: float, n: int, z: float, r: float, y: float, t: float) -> complex:
@@ -568,9 +554,7 @@ def eH(
     )
 
     # Exponential term
-    exp_term = np.exp(
-        j * d3 * z / (d3 - d1) + 0.5 * c * t * z + 1j * gamma * t
-    )
+    exp_term = np.exp(j * d3 * z / (d3 - d1) + 0.5 * c * t * z + 1j * gamma * t)
 
     # Argument for theta4
     arg = 1j * t + 1j * v * (j - 0.5) + z / (d3 - d1) - 2 * r
@@ -824,6 +808,171 @@ def eBz(
     return float(np.real(result))
 
 
+def _binormal_norm_deviation(binormals: NDArray[np.float64]) -> float:
+    """Return relative deviation of binormal norms from their mean norm."""
+    norms = np.linalg.norm(binormals, axis=1)
+    mean_norm = np.mean(norms)
+    if mean_norm <= 1e-14 or not np.isfinite(mean_norm):
+        return np.inf
+    return float(np.max(np.abs(norms - mean_norm)) / mean_norm)
+
+
+def _normalize_binormals(binormals: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Normalize binormal rows, preserving Mathematica formula signs."""
+    normalized = np.array(binormals, dtype=float, copy=True)
+    norms = np.linalg.norm(normalized, axis=1)
+    if np.any(norms <= 1e-14) or not np.all(np.isfinite(norms)):
+        raise FloatingPointError("Cannot normalize zero or non-finite theta binormal")
+    normalized /= norms[:, np.newaxis]
+    return normalized
+
+
+def _generate_theta_binormals_high_precision(
+    v: float,
+    z: float,
+    r: float,
+    y: float,
+    n_hinges: int,
+    t: float,
+    dps: int,
+) -> NDArray[np.float64]:
+    """Evaluate Mathematica's Bx/By/Bz formulas with mpmath precision.
+
+    The direct formula has a removable singularity when ``G`` is nearly zero.
+    Double precision can lose the cancellation between the numerator and
+    ``Abs[G]`` denominator.  This path keeps the reference Mathematica formula
+    intact and only raises the arithmetic precision for those cases.
+    """
+    import mpmath as mp
+
+    with mp.workdps(dps):
+        vv = mp.mpf(str(v))
+        zz = mp.mpf(str(z))
+        rr = mp.mpf(str(r))
+        yy = mp.mpf(str(y))
+        tt = mp.mpf(str(t))
+        half = mp.mpf("0.5")
+        one_j = mp.j
+
+        def th(kind: int, x: mp.mpc | mp.mpf) -> mp.mpc:
+            return mp.jtheta(kind, mp.pi * x, mp.e ** (-mp.pi * yy))
+
+        def dth(kind: int, x: mp.mpc | mp.mpf) -> mp.mpc:
+            return mp.diff(lambda xx: th(kind, xx), x)
+
+        d1_minus = dth(1, -half * one_j * vv + rr) / th(1, -half * one_j * vv + rr)
+        d1_plus = dth(1, half * one_j * vv + rr) / th(1, half * one_j * vv + rr)
+        d3_minus = dth(3, -half * one_j * vv + rr) / th(3, -half * one_j * vv + rr)
+        d3_plus = dth(3, half * one_j * vv + rr) / th(3, half * one_j * vv + rr)
+        delta_1 = d1_minus - d1_plus
+        delta_3 = d3_minus - d3_plus
+        delta_diff = delta_3 - delta_1
+
+        r1 = th(1, -half * one_j * vv + rr) / th(1, half * one_j * vv + rr)
+        r3 = th(3, -half * one_j * vv + rr) / th(3, half * one_j * vv + rr)
+        c = 4 * mp.pi * one_j / (yy * delta_diff)
+        gamma_1 = -mp.pi / yy * (4 * rr - 1)
+        alpha_2 = mp.sqrt(th(3, 2 * rr) * th(3, 0))
+        theta1_iv = th(1, one_j * vv)
+        theta3_iv = th(3, one_j * vv)
+        theta3_0 = th(3, 0)
+        theta3_minus = th(3, -half * one_j * vv + rr)
+        theta1_plus = th(1, half * one_j * vv + rr)
+
+        def common_exp(n: int) -> mp.mpc:
+            return mp.e ** (
+                (mp.mpf(n) + half) * delta_3 / delta_diff * zz + c * tt * zz / 2
+            )
+
+        def f_wave_mp(n: int) -> mp.mpc:
+            arg = one_j * vv * n + zz / delta_diff + rr + one_j * tt
+            return (
+                theta3_minus
+                * r3**n
+                * common_exp(n)
+                * mp.e ** (-gamma_1 * one_j * tt / 2)
+                * th(2, arg)
+            )
+
+        def g_wave_mp(n: int) -> mp.mpc:
+            arg = one_j * vv * n + zz / delta_diff - rr + one_j * tt
+            return (
+                theta1_plus
+                * r1 ** (-n)
+                * common_exp(n)
+                * mp.e ** (gamma_1 * one_j * tt / 2)
+                * th(4, arg)
+            )
+
+        def f_big(n: int) -> mp.mpc:
+            arg = one_j * tt + one_j * vv * (mp.mpf(n) - half) + zz / delta_diff
+            return (
+                alpha_2
+                * mp.e ** (n * delta_3 / delta_diff * zz + c * tt * zz / 2)
+                * th(2, arg)
+            )
+
+        def g_big(n: int) -> mp.mpc:
+            arg = one_j * tt + one_j * vv * (mp.mpf(n) - half) + zz / delta_diff
+            return (
+                alpha_2
+                * theta1_iv
+                / theta3_0
+                * mp.e ** (n * delta_3 / delta_diff * zz + c * tt * zz / 2)
+                * r1 ** (-n)
+                * r3**n
+                * th(4, arg)
+            )
+
+        def k_angle(n: int) -> mp.mpc:
+            arg = one_j * tt + one_j * vv * (mp.mpf(n) - half) + zz / delta_diff
+            return 2 * mp.atan(
+                -one_j * theta1_iv * th(4, arg) / (theta3_iv * th(2, arg))
+            )
+
+        binormals = np.zeros((n_hinges + 1, 3), dtype=float)
+        for n in range(n_hinges + 1):
+            sign_k = mp.sign(mp.re(k_angle(n)))
+            if sign_k == 0:
+                sign_k = mp.mpf(1)
+
+            f_n = f_wave_mp(n)
+            f_nm1 = f_wave_mp(n - 1)
+            g_n = g_wave_mp(n)
+            g_nm1 = g_wave_mp(n - 1)
+            f_ref = f_big(n)
+            abs_g_ref = abs(g_big(n))
+
+            bx_num = (
+                mp.conj(g_n) * f_nm1
+                - mp.conj(g_nm1) * f_n
+                - mp.conj(f_nm1) * g_n
+                + mp.conj(f_n) * g_nm1
+            )
+            by_num = (
+                mp.conj(g_n) * f_nm1
+                - mp.conj(g_nm1) * f_n
+                + mp.conj(f_nm1) * g_n
+                - mp.conj(f_n) * g_nm1
+            )
+            bz_num = (
+                mp.conj(f_n) * f_nm1
+                - mp.conj(f_nm1) * f_n
+                - mp.conj(g_n) * g_nm1
+                + mp.conj(g_nm1) * g_n
+            )
+
+            binormals[n, 0] = float(
+                mp.re(sign_k * bx_num / (2 * one_j * f_ref * abs_g_ref))
+            )
+            binormals[n, 1] = float(mp.re(sign_k * by_num / (2 * f_ref * abs_g_ref)))
+            binormals[n, 2] = float(
+                mp.re(sign_k * bz_num / (2 * one_j * f_ref * abs_g_ref))
+            )
+
+    return binormals
+
+
 def generate_theta_binormals(
     v: float,
     z: float,
@@ -835,6 +984,7 @@ def generate_theta_binormals(
     *,
     use_curve_fallback: bool = True,
     magnitude_threshold: float = 0.1,
+    high_precision_dps: int = 80,
 ) -> NDArray[np.float64]:
     """Generate binormal (hinge) vectors directly from theta functions.
 
@@ -842,9 +992,11 @@ def generate_theta_binormals(
     binormals without relying on curve generation. The binormals are computed from
     differences of complex wave functions at adjacent spatial indices.
 
-    For numerical stability, when raw binormals have significantly varying
-    magnitudes (indicating numerical issues in wave functions), automatically
-    falls back to computing binormals from the curve.
+    Some valid parameters place ``G`` close to zero in Mathematica's Bx/By/Bz
+    formulas. The singularity is removable, but double precision can lose the
+    numerator/denominator cancellation. When that is detected, this function
+    re-evaluates the same reference formulas with mpmath precision before
+    normalizing the result.
 
     Args:
         v: Parameter v (controls shape)
@@ -854,10 +1006,13 @@ def generate_theta_binormals(
         N: Number of tetrahedra
         t: Time parameter for evolution (default 0.0)
         gamma: Phase parameter (default 0.0)
-        use_curve_fallback: If True, fall back to curve-based computation when
-                           wave functions are numerically unstable (default True)
-        magnitude_threshold: Threshold for detecting unstable magnitudes
-                           (default 0.1 means >10% variation triggers fallback)
+        use_curve_fallback: If True, fall back to curve-based computation only
+                           if high-precision reference evaluation fails.
+        magnitude_threshold: Threshold for detecting unstable raw magnitudes
+                           (default 0.1 means >10% variation triggers
+                           high-precision evaluation)
+        high_precision_dps: Decimal precision used by the high-precision
+                           Mathematica-formula fallback.
 
     Returns:
         Array of binormal (hinge) vectors, shape (N+1, 3)
@@ -874,12 +1029,9 @@ def generate_theta_binormals(
         (39, 3)
 
     Note:
-        Wave function formulas can be numerically unstable for certain parameter
-        combinations. When detected, this function automatically uses curve-based
-        binormal computation for better numerical stability.
+        The signs are the signs produced by Mathematica's ``Sign[K]`` formula.
+        No curve-derived sign fixing is applied.
     """
-    from .geometry import curve_to_binormals
-
     binormals = np.zeros((N + 1, 3), dtype=float)
 
     # Compute raw binormals from Mathematica formulas
@@ -888,62 +1040,23 @@ def generate_theta_binormals(
         binormals[j, 1] = eBy(v, z, r, y, j, t, gamma)
         binormals[j, 2] = eBz(v, z, r, y, j, t, gamma)
 
-    # Check if raw magnitudes are reasonable
-    raw_norms = np.linalg.norm(binormals, axis=1)
-    mean_norm = np.mean(raw_norms)
-    max_deviation = np.max(np.abs(raw_norms - mean_norm)) / mean_norm
+    if (
+        not np.all(np.isfinite(binormals))
+        or _binormal_norm_deviation(binormals) > magnitude_threshold
+    ):
+        try:
+            binormals = _generate_theta_binormals_high_precision(
+                v, z, r, y, N, t, high_precision_dps
+            )
+        except Exception:
+            if not use_curve_fallback:
+                raise
+            from .geometry import curve_to_binormals
 
-    if use_curve_fallback and max_deviation > magnitude_threshold:
-        # Raw binormals have significantly varying magnitudes - use curve fallback
-        # this is due to the zeros of theta4
-        import warnings
-        warnings.warn(
-            f"Wave function binormals have unstable magnitudes "
-            f"(max deviation {max_deviation:.1%} from mean). "
-            f"Using curve-based computation for better stability.",
-            RuntimeWarning,
-            stacklevel=2,
-        )
+            curve = generate_theta_curve(v, z, r, y, N, t, gamma)
+            return curve_to_binormals(curve, reference=None)
 
-        # Generate curve and compute binormals from it
-        curve = generate_theta_curve(v, z, r, y, N, t, gamma)
-        binormals = curve_to_binormals(curve, reference=None)
-        return binormals
-
-    # normalize binormals
-    for j in range(N + 1):
-        norm = np.linalg.norm(binormals[j])
-        if norm > 1e-10:
-            binormals[j] /= norm
-        else:
-            binormals[j] = np.array([0.0, 0.0, 1.0])  # default direction if zero
-
-    # Apply sign-fixing for frame continuity (matches curve_to_binormals convention)
-    # Reference binormal for first frame
-    Bp0 = np.array([0.0, 0.0, 1.0])
-
-    # Fix sign of first binormal to match reference
-    if np.dot(binormals[0], Bp0) < 0:
-        binormals[0] = -binormals[0]
-
-    # Compute tangent vectors for sign-fixing
-    tangents = np.zeros((N, 3), dtype=float)
-    for k in range(N):
-        k_next = (k + 1) if k < N else 0
-        tangents[k, 0] = eX(v, z, r, y, k_next, t, gamma) - eX(v, z, r, y, k, t, gamma)
-        tangents[k, 1] = eY(v, z, r, y, k_next, t, gamma) - eY(v, z, r, y, k, t, gamma)
-        tangents[k, 2] = eZ(v, z, r, y, k_next, t) - eZ(v, z, r, y, k, t)
-
-    # Fix signs of subsequent binormals for continuity
-    for i in range(1, N + 1):
-        cross = np.cross(binormals[i - 1], binormals[i])
-        sign_val = np.sign(np.dot(cross, tangents[(i - 1) % N]))
-        if sign_val == 0:
-            sign_val = 1.0
-        if sign_val < 0:
-            binormals[i] = -binormals[i]
-
-    return binormals
+    return _normalize_binormals(binormals)
 
 
 def generate_theta_curve(
@@ -1008,7 +1121,7 @@ def generate_animation_theta(
     num_frames: int,
     t_step: float = 0.05,
     gamma: float = 0.0,
-    output: str = "binormals", # or "curve"
+    output: str = "binormals",  # or "curve"
 ) -> list[NDArray[np.float64]]:
     """Generate exact analytic animation using Jacobi theta functions.
 
@@ -1088,7 +1201,8 @@ def close2(v: float, r: float, N: int, m: int) -> complex:
         Complex value (should be 0 for closure)
 
     References:
-        Mathematica: close2[v,r,y,k,m]:=1-Exp[m*Pi*I*(4*r+1)]*R1[v,r,y]^(-k)*R3[v,r,y]^(-k)
+        Mathematica: close2[v,r,y,k,m] :=
+            1 - Exp[m*Pi*I*(4*r+1)]*R1[v,r,y]^(-k)*R3[v,r,y]^(-k)
         With constraint: y = k*v/m
     """
     y = N * v / m
@@ -1167,7 +1281,15 @@ def solve_closure_conditions(
     x0 = np.array([v_init, r_init])
     bounds = ([0.001, 0.001], [2.0, 1.0])
 
-    sol = least_squares(residuals, x0, jac='3-point',bounds=bounds, max_nfev=10000, ftol=1e-18, xtol=1e-18)
+    sol = least_squares(
+        residuals,
+        x0,
+        jac="3-point",
+        bounds=bounds,
+        max_nfev=10000,
+        ftol=1e-18,
+        xtol=1e-18,
+    )
 
     if sol.success:
         v, r = sol.x

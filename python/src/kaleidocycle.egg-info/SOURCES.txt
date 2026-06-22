@@ -29,6 +29,7 @@ tests/test_generate_animation_integration.py
 tests/test_geometry.py
 tests/test_io.py
 tests/test_jax_gradients.py
+tests/test_jaxopt_solvers.py
 tests/test_kaleidocycle_animation.py
 tests/test_kaleidocycle_animation_from_curves.py
 tests/test_kaleidocycle_from_n.py
