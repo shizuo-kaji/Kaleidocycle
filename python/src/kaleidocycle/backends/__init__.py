@@ -25,7 +25,7 @@ Per-function backend selection:
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from importlib.util import find_spec
 
 from .base import Backend
 from .numpy_backend import NumPyBackend
@@ -39,23 +39,19 @@ __all__ = [
 ]
 
 # Backend registry
-_BACKENDS: Dict[str, Optional[Backend]] = {
+_BACKENDS: dict[str, Backend | None] = {
     'numpy': None,  # Lazy initialization
     'jax': None,    # Lazy initialization
 }
 
 # Track which backends are available
-_AVAILABLE_BACKENDS: Dict[str, bool] = {
+_AVAILABLE_BACKENDS: dict[str, bool] = {
     'numpy': True,  # Always available
 }
 
-# Check JAX availability
-try:
-    import jax  # noqa: F401
-    import jaxopt  # noqa: F401
-    _AVAILABLE_BACKENDS['jax'] = True
-except ImportError:
-    _AVAILABLE_BACKENDS['jax'] = False
+# JAX is imported only when the backend is first requested. Optimization uses
+# SciPy with JAX derivatives and does not require a separate optimizer package.
+_AVAILABLE_BACKENDS["jax"] = find_spec("jax") is not None
 
 # Current backend
 _CURRENT_BACKEND: str = 'numpy'
@@ -79,7 +75,7 @@ def get_available_backends() -> list[str]:
     return [name for name, available in _AVAILABLE_BACKENDS.items() if available]
 
 
-def list_backends() -> Dict[str, bool]:
+def list_backends() -> dict[str, bool]:
     """Get dictionary of all backends and their availability status.
 
     Returns

@@ -7,18 +7,20 @@ constant torsion, meaning their pairwise inner products are constant. Oriented
 cycles end with the same hinge direction they started with; non-oriented cycles
 end with the opposite direction.
 
-The current Python package includes geometry, energies, constraints, solvers,
-theta-function constructions, animation tools, reports, I/O, and plotting.
+The current Python package includes geometry, integrable curvature flows,
+energies, constraints, solvers, theta-function constructions, animation tools,
+reports, I/O, and plotting.
 
 ## Install
 
-Use an isolated environment while porting or running notebooks:
+Use the project environment while porting or running notebooks:
 
 ```bash
-uv venv .venv
-source .venv/bin/activate
-pip install -e .[dev]
+python -m pip install -e ".[dev]"
 ```
+
+JAX is included in the development dependencies. For a smaller runtime install
+with automatic differentiation support, use `python -m pip install -e ".[jax]"`.
 
 Run the test suite with:
 
@@ -26,42 +28,52 @@ Run the test suite with:
 pytest
 ```
 
-## Quick Example
+## Integrable deformation
 
 ```python
-from kaleidocycle import Kaleidocycle, KaleidocycleAnimation, generate_animation
+import numpy as np
 
-kc = Kaleidocycle(8, oriented=True, seed=42)
-print(kc.is_closed, kc.is_aligned, kc.constant_torsion)
-
-frames = generate_animation(
-    kc.hinges,
-    num_frames=30,
-    step_size=0.02,
-    rule="sine-Gordon",
-    oriented=kc.oriented,
+from kaleidocycle import (
+    framed_polygon_from_binormals,
+    import_json,
+    integrate_curvature_flow,
 )
-anim = KaleidocycleAnimation(frames=frames, evolution_rule="sine-Gordon")
-anim.compute_scalar_property("bending_energy")
-anim.compute_scalar_property("mean_torsion")
+
+kc = import_json("notebooks/output/kaleidocycle_k10_nonoriented_bending.json")
+initial = framed_polygon_from_binormals(kc.hinges)
+evolution = integrate_curvature_flow(
+    initial.curvatures,
+    initial.torsion_angle,
+    np.linspace(0.0, 1.0, 101),
+    flow="sine-gordon",
+    sign=initial.sign,
+    initial_frame=initial.frames[0],
+)
+
+configurations = evolution.configurations()
+print(np.ptp(evolution.first_hamiltonian))
+print(np.linalg.norm(configurations[-1].closure_residual))
 ```
+
+The integrable API uses the Cayley curvature
+`kappa = 2*tan(phi/2)`. `sign=1` means periodic/oriented binormals and
+`sign=-1` means anti-periodic/anti-oriented binormals. The two mKdV flows are
+available for both signs; the sine--Gordon flow is defined only for `sign=-1`.
 
 ## Notebooks
 
 Interactive examples live in `notebooks/`. Use `%matplotlib widget` for 3D
-interaction and make sure the notebook kernel points at `.venv`.
+interaction and make sure the notebook kernel points at the project environment.
 
 - `FindKaleidocycles.ipynb` explores optimization-based construction.
 - `ExplicitConstructionWithTheta.ipynb` demonstrates analytic theta-function
   solutions.
 - `Animation.ipynb` explores animation utilities.
+- `IntegrableDeformations.ipynb` demonstrates curvature reconstruction, both
+  mKdV flows, the anti-periodic sine--Gordon flow, and numerical conservation.
 - `KaleidocycleProperties.ipynb` inspects structural properties and residuals.
 - `AnimationScalarProperties.ipynb` computes and plots animation diagnostics.
-- `SimpleScalarPlot.ipynb` is the minimal scalar-property plotting workflow.
-- `StationarityCheck.ipynb` checks constrained stationarity of energy critical
-  points.
 - `BackendComparison.ipynb` compares NumPy and optional JAX solver backends.
-- `ReportDemo.ipynb` generates formatted diagnostic reports.
 - `LocalDoF.ipynb` analyzes infinitesimal and finite degrees of freedom of the
   constraint-preserving motion at a given configuration.
 
@@ -73,6 +85,10 @@ interaction and make sure the notebook kernel points at `.venv`.
 - `src/kaleidocycle/animation.py`: sine-Gordon flow, step/random animation
   generation, frame cleaning, alignment, sorting, curve conversion, and
   `KaleidocycleAnimation`.
+- `src/kaleidocycle/integrable.py`: twisted curvature coordinates, discrete
+  Frenet reconstruction, compatible lifts, two commuting mKdV fields, the
+  anti-periodic sine--Gordon field, Hamiltonians, Poisson operator, variational
+  recurrence, QRT invariant, and high-accuracy time integration.
 - `src/kaleidocycle/theta.py`: Jacobi theta functions, closure equations,
   analytic curves, theta binormals, and theta animations.
 - `src/kaleidocycle/constraints.py`: unit norm, closure, alignment, constant

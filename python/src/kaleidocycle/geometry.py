@@ -2046,18 +2046,20 @@ def curvature_recursion(
     *,
     oriented: bool = True,
 ) -> np.ndarray:
-    """Compute curvature recursion relation residuals.
+    """Compute the curvature-recurrence quantity at every vertex.
 
-    This function evaluates the discrete curvature recursion formula, which
-    expresses a constraint relating curvature values at consecutive indices.
-    The result should be close to zero for valid kaleidocycle configurations.
+    This legacy angle-coordinate API returns one quarter of
+    ``integrable.variational_u``.  A configuration in the variational
+    one-degree-of-freedom reduction has a *constant* result; the values do not
+    generally vanish.  Use ``variational_recurrence_residual`` for a residual
+    that is zero on the three-term recurrence.
 
     Args:
         curvature: Array of curvature values, shape (n,)
         oriented: Whether the kaleidocycle is oriented
 
     Returns:
-        Array of recursion residuals, shape (n,)
+        Array of recurrence values, shape (n,)
 
     References:
         Corresponds to curvature_recursion function in Maple code (line 232)
@@ -2065,41 +2067,20 @@ def curvature_recursion(
     Example:
         >>> K = pairwise_curvature(hinges, tangents)
         >>> residuals = curvature_recursion(K, oriented=True)
-        >>> print(np.max(np.abs(residuals)))  # Should be small for valid config
+        >>> print(np.ptp(residuals))  # Small on the variational reduction
     """
-    K = np.asarray(curvature, dtype=float)
-    if K.ndim != 1:
-        msg = f"expected 1D curvature array, got shape {K.shape}"
+    angles = np.asarray(curvature, dtype=float)
+    if angles.ndim != 1:
+        msg = f"expected 1D curvature array, got shape {angles.shape}"
         raise ValueError(msg)
+    from .integrable import variational_u
 
-    n = len(K)
-
-    # Initialize sign array
-    s = np.ones(n)
-    if not oriented:
-        s[0] = -1
-        s[-1] = -1
-
-    # Compute recursion for each index
-    # K[i+1], K[i-1], K[i] with wraparound
-    result = np.zeros(n)
-    for i in range(n):
-        i_plus = (i + 1) % n
-        i_minus = (i - 1) % n
-
-        tan_i = np.tan(K[i] / 2)
-        tan_plus = np.tan(K[i_plus] / 2)
-        tan_minus = np.tan(K[i_minus] / 2)
-
-        # s[i]*tan(K[i+1]/2)*tan(K[i-1]/2) - tan(K[i]/2)^2
-        # + s[i]*tan(K[i+1]/2)*tan(K[i-1]/2)*tan(K[i]/2)^2
-        result[i] = (
-            s[i] * tan_plus * tan_minus
-            - tan_i**2
-            + s[i] * tan_plus * tan_minus * tan_i**2
-        )
-
-    return result
+    sign = 1 if oriented else -1
+    # Keep the legacy diagnostic defined at an angle numerically equal to pi.
+    # The canonical integrable chart intentionally rejects this nonregular
+    # boundary, but reports should still be able to describe degenerate input.
+    curvatures = 2.0 * np.tan(angles / 2.0)
+    return 0.25 * variational_u(curvatures, sign=sign)
 
 
 def curvature_recursion_from_tangents(

@@ -1,4 +1,4 @@
-"""Tests for JAXopt-based optimization."""
+"""Tests for SciPy optimization with JAX automatic differentiation."""
 
 from __future__ import annotations
 
@@ -11,10 +11,10 @@ from kaleidocycle.solvers import SolverOptions, optimize_cycle
 
 
 @pytest.mark.jax
-class TestJAXoptOptimization:
-    """Test JAXopt-based optimization."""
+class TestJAXOptimization:
+    """Test SciPy optimization driven by JAX derivatives."""
 
-    def test_jaxopt_optimizer_runs(self):
+    def test_jax_optimizer_runs(self):
         """Test that JAX+scipy optimizer completes without error."""
         pytest.importorskip("jax")
 
@@ -37,10 +37,9 @@ class TestJAXoptOptimization:
         assert result.backend_name == 'scipy'  # JAX backend uses scipy with autodiff
 
     @pytest.mark.parametrize("objective", ["bending", "mean_cos", "neg_mean_cos"])
-    def test_jaxopt_different_objectives(self, objective):
-        """Test JAXopt with different objective functions."""
+    def test_jax_different_objectives(self, objective):
+        """Test JAX with different objective functions."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
 
         kc = Kaleidocycle(n=6, oriented=True, seed=42)
         config = ConstraintConfig(oriented=True, constant_torsion=True)
@@ -58,10 +57,9 @@ class TestJAXoptOptimization:
         assert np.all(np.isfinite(result.hinges))
         assert np.isfinite(result.energy)
 
-    def test_jaxopt_respects_constraints(self):
-        """Test that JAXopt optimization respects constraints."""
+    def test_jax_respects_constraints(self):
+        """Test that JAX optimization respects constraints."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
 
         kc = Kaleidocycle(n=6, oriented=True, seed=42)
         config = ConstraintConfig(oriented=True, constant_torsion=True)
@@ -89,10 +87,9 @@ class TestJAXoptOptimization:
         assert result.penalty < 1e-2
 
     @pytest.mark.parametrize("oriented", [True, False])
-    def test_jaxopt_oriented_vs_nonoriented(self, oriented):
-        """Test JAXopt with oriented and non-oriented configurations."""
+    def test_jax_oriented_vs_nonoriented(self, oriented):
+        """Test JAX with oriented and non-oriented configurations."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
 
         kc = Kaleidocycle(n=6, oriented=oriented, seed=42)
         config = ConstraintConfig(oriented=oriented, constant_torsion=True)
@@ -109,10 +106,9 @@ class TestJAXoptOptimization:
         assert result.hinges.shape == kc.hinges.shape
         assert result.success
 
-    def test_jaxopt_reduces_objective(self):
-        """Test that JAXopt reduces the objective function."""
+    def test_jax_reduces_objective(self):
+        """Test that JAX reduces the objective function."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
 
         kc = Kaleidocycle(n=6, oriented=True, seed=42)
         config = ConstraintConfig(oriented=True, constant_torsion=True)
@@ -138,10 +134,10 @@ class TestJAXoptOptimization:
 
 
 @pytest.mark.jax
-class TestJAXoptVsScipy:
-    """Compare JAXopt and SciPy optimization results."""
+class TestJAXVsScipy:
+    """Compare JAX and SciPy optimization results."""
 
-    def test_jaxopt_vs_scipy_convergence(self):
+    def test_jax_vs_scipy_convergence(self):
         """Test that JAX and NumPy backends converge to similar solutions."""
         pytest.importorskip("jax")
 
@@ -180,7 +176,7 @@ class TestJAXoptVsScipy:
         assert result_jax.penalty < 1e-2
         assert result_numpy.penalty < 1e-2
 
-    def test_jaxopt_scipy_both_complete(self):
+    def test_jax_scipy_both_complete(self):
         """Test that both backends complete optimization."""
         pytest.importorskip("jax")
 
@@ -210,13 +206,12 @@ class TestJAXoptVsScipy:
 
 
 @pytest.mark.jax
-class TestJAXoptEdgeCases:
-    """Test JAXopt edge cases and robustness."""
+class TestJAXEdgeCases:
+    """Test JAX edge cases and robustness."""
 
-    def test_jaxopt_small_kaleidocycle(self):
-        """Test JAXopt with small kaleidocycle (n=3)."""
+    def test_jax_small_kaleidocycle(self):
+        """Test JAX with small kaleidocycle (n=3)."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
 
         kc = Kaleidocycle(n=3, oriented=True, seed=42)
         config = ConstraintConfig(oriented=True, constant_torsion=True)
@@ -233,10 +228,9 @@ class TestJAXoptEdgeCases:
         assert result.hinges.shape == (4, 3)  # n+1 hinges
         assert np.all(np.isfinite(result.hinges))
 
-    def test_jaxopt_different_penalty_weights(self):
-        """Test JAXopt with different penalty weights."""
+    def test_jax_different_penalty_weights(self):
+        """Test JAX with different penalty weights."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
 
         kc = Kaleidocycle(n=6, oriented=True, seed=42)
         config = ConstraintConfig(oriented=True, constant_torsion=True)
@@ -256,10 +250,9 @@ class TestJAXoptEdgeCases:
             # (but this is not strictly enforced in test)
             assert result.penalty < 0.1  # Should satisfy constraints
 
-    def test_jaxopt_handles_nan_gracefully(self):
-        """Test that JAXopt handles potential numerical issues."""
+    def test_jax_handles_nan_gracefully(self):
+        """Test that JAX handles potential numerical issues."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
 
         # Create a potentially problematic initial configuration
         kc = Kaleidocycle(n=6, oriented=True, seed=42)
@@ -283,13 +276,12 @@ class TestJAXoptEdgeCases:
 
 
 @pytest.mark.jax
-class TestJAXoptPerformance:
-    """Test JAXopt performance characteristics."""
+class TestJAXPerformance:
+    """Test JAX performance characteristics."""
 
-    def test_jaxopt_converges_in_reasonable_iterations(self):
-        """Test that JAXopt converges within reasonable iterations."""
+    def test_jax_converges_in_reasonable_iterations(self):
+        """Test that JAX converges within reasonable iterations."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
 
         kc = Kaleidocycle(n=8, oriented=True, seed=42)
         config = ConstraintConfig(oriented=True, constant_torsion=True)
@@ -307,10 +299,9 @@ class TestJAXoptPerformance:
         assert result.success
         assert result.penalty < 1e-2
 
-    def test_jaxopt_runtime_reasonable(self):
-        """Test that JAXopt runs in reasonable time."""
+    def test_jax_runtime_reasonable(self):
+        """Test that JAX runs in reasonable time."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
         import time
 
         kc = Kaleidocycle(n=10, oriented=True, seed=42)

@@ -53,7 +53,6 @@ class TestBackendSwitching:
     def test_set_backend_jax(self):
         """Should be able to set JAX backend if available."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
 
         set_backend('jax')
         backend = get_backend()
@@ -85,7 +84,6 @@ class TestBackendSwitching:
     def test_get_specific_jax_backend(self):
         """Should be able to get JAX backend by name."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
 
         backend = get_backend('jax')
         assert backend.name == 'jax'
@@ -140,7 +138,6 @@ class TestJAXBackend:
     def test_jax_backend_available(self):
         """JAX backend should be importable."""
         pytest.importorskip("jax")
-        pytest.importorskip("jaxopt")
 
         backend = get_backend('jax')
         assert backend.name == 'jax'

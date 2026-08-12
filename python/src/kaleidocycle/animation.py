@@ -23,6 +23,7 @@ from .geometry import (
     pairwise_cosines,
     tangents_to_curve,
 )
+from .integrable import cayley_curvatures, sine_gordon_potential
 
 
 @dataclass
@@ -701,14 +702,11 @@ def curvature_to_omega(
     n = K.shape[0]
 
     if not oriented and not mkdv:
-        # Non-oriented sine-Gordon: simplified formula
-        # phi[j] = 0.5 * (sum(K[j+1:n]) - sum(K[0:j]))
-        phi = np.zeros(n)
-        for j in range(n):
-            phi[j] = 0.5 * (np.sum(K[j + 1 :]) - np.sum(K[: j + 1]))
-
-        # Add wraparound element
-        return np.append(phi, -phi[0])
+        # K contains curvature angles in this legacy API.  Delegate the
+        # anti-periodic potential construction to the canonical integrable
+        # implementation to keep the boundary convention in one place.
+        potential = sine_gordon_potential(cayley_curvatures(K))
+        return np.append(potential, -potential[0])
 
     elif oriented and not mkdv:
         # Oriented sine-Gordon: requires solving nonlinear system

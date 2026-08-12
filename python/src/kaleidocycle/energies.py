@@ -11,7 +11,9 @@ from numpy.typing import NDArray
 LOG2: Final[float] = math.log(2.0)
 
 
-def _pairwise_vectors(vectors: NDArray[np.float64], wrap: bool) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+def _pairwise_vectors(
+    vectors: NDArray[np.float64], wrap: bool
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Return aligned pair arrays optionally wrapping the final vector."""
 
     if wrap:
@@ -20,7 +22,9 @@ def _pairwise_vectors(vectors: NDArray[np.float64], wrap: bool) -> tuple[NDArray
     return vectors[:-1], vectors[1:]
 
 
-def _normalized_dot(a: NDArray[np.float64], b: NDArray[np.float64]) -> NDArray[np.float64]:
+def _normalized_dot(
+    a: NDArray[np.float64], b: NDArray[np.float64]
+) -> NDArray[np.float64]:
     """Compute dot products normalised by ‖a‖‖b‖ with clipping."""
 
     norms_a = np.linalg.norm(a, axis=1)
@@ -37,14 +41,22 @@ def bending_energy(
     *,
     quadratic: bool = False,
 ) -> float:
-    """Bobenko-Suris bending energy over the tangent vectors. ∑ᵢ log(1+tan(κᵢ/2)²)."""
-    if tangents_or_curvatures.ndim ==1: # assume curvatures
-        curvatures = tangents_or_curvatures
-        return(float(np.sum(np.arctan(curvatures/2)**2)))
-    elif tangents_or_curvatures.ndim != 2 or tangents_or_curvatures.shape[1] != 3:
+    """Bobenko--Suris bending energy.
+
+    A one-dimensional input is interpreted as Cayley curvature
+    ``kappa = 2 tan(phi / 2)`` and returns ``sum(log(1+kappa**2/4))``.
+    A ``(N, 3)`` input is interpreted as tangent vectors and evaluates the
+    equivalent angle formula.
+    """
+    values = np.asarray(tangents_or_curvatures, dtype=float)
+    if values.ndim == 1:
+        from .integrable import first_hamiltonian
+
+        return first_hamiltonian(values)
+    if values.ndim != 2 or values.shape[1] != 3:
         msg = f"expected (m, 3) tangent array, got shape {tangents_or_curvatures.shape}"
         raise ValueError(msg)
-    a, b = _pairwise_vectors(tangents_or_curvatures, wrap=True)
+    a, b = _pairwise_vectors(values, wrap=True)
     ratios = _normalized_dot(a, b)
     # avoid numerical error near ratio = -1
     ratios = np.clip(ratios, -1.0 + 1e-15, 1.0)
@@ -68,6 +80,7 @@ def torsion_energy(
         raise ValueError(msg)
     a, b = _pairwise_vectors(hinges, wrap=wrap)
     ratios = _normalized_dot(a, b)
+    ratios = np.clip(ratios, -1.0 + 1e-15, 1.0)
     if quadratic:
         angles = np.arccos(ratios)
         return float(np.sum(angles**2))

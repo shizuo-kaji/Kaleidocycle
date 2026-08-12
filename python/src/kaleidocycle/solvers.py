@@ -70,34 +70,24 @@ class OptimizationSummary:
     energy: float
     penalty: float
     _scipy_result: Optional[OptimizeResult] = None
-    _jaxopt_result: Optional[object] = None  # JAXopt OptStep result
 
     @property
-    def result(self) -> object:
-        """Unified access to optimization result (scipy or jaxopt)."""
-        if self._scipy_result is not None:
-            return self._scipy_result
-        elif self._jaxopt_result is not None:
-            return self._jaxopt_result
-        return None
+    def result(self) -> OptimizeResult | None:
+        """Underlying SciPy optimization result."""
+
+        return self._scipy_result
 
     @property
     def backend_name(self) -> str:
         """Name of the backend used for optimization."""
-        if self._scipy_result is not None:
-            return 'scipy'
-        elif self._jaxopt_result is not None:
-            return 'jaxopt'
-        return 'unknown'
+
+        return "scipy" if self._scipy_result is not None else "unknown"
 
     @property
     def success(self) -> bool:
-        if self._scipy_result is not None:
-            return bool(self._scipy_result.success)
-        elif self._jaxopt_result is not None:
-            # JAXopt doesn't have a success flag, check if converged
-            return True  # Assume success if optimization completed
-        return False
+        return bool(
+            self._scipy_result is not None and self._scipy_result.success
+        )
 
 
 def _build_constraint_dicts(config: ConstraintConfig) -> list[dict]:
