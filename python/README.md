@@ -13,8 +13,6 @@ reports, I/O, and plotting.
 
 ## Install
 
-Use the project environment while porting or running notebooks:
-
 ```bash
 python -m pip install -e ".[dev]"
 ```
@@ -27,38 +25,6 @@ Run the test suite with:
 ```bash
 pytest
 ```
-
-## Integrable deformation
-
-```python
-import numpy as np
-
-from kaleidocycle import (
-    framed_polygon_from_binormals,
-    import_json,
-    integrate_curvature_flow,
-)
-
-kc = import_json("notebooks/output/kaleidocycle_k10_nonoriented_bending.json")
-initial = framed_polygon_from_binormals(kc.hinges)
-evolution = integrate_curvature_flow(
-    initial.curvatures,
-    initial.torsion_angle,
-    np.linspace(0.0, 1.0, 101),
-    flow="sine-gordon",
-    sign=initial.sign,
-    initial_frame=initial.frames[0],
-)
-
-configurations = evolution.configurations()
-print(np.ptp(evolution.first_hamiltonian))
-print(np.linalg.norm(configurations[-1].closure_residual))
-```
-
-The integrable API uses the Cayley curvature
-`kappa = 2*tan(phi/2)`. `sign=1` means periodic/oriented binormals and
-`sign=-1` means anti-periodic/anti-oriented binormals. The two mKdV flows are
-available for both signs; the sine--Gordon flow is defined only for `sign=-1`.
 
 ## Notebooks
 
@@ -290,3 +256,36 @@ K-G count, rigidity matrix rank, Calladine/Pellegrino self-stress diagnostics,
 Connelly second-order checks, Möbius / theta-construction stationary detection,
 and the 1-DoF vertex-trajectory visualization. The notebook uses the JAX backend
 for Jacobian-based calculations wherever the current APIs support it.
+
+
+## Integrable deformation
+
+```python
+import numpy as np
+
+from kaleidocycle import (
+    framed_polygon_from_binormals,
+    import_json,
+    integrate_curvature_flow,
+)
+
+kc = import_json("notebooks/output/kaleidocycle_k10_nonoriented_bending.json")
+initial = framed_polygon_from_binormals(kc.hinges)
+evolution = integrate_curvature_flow(
+    initial.curvatures,
+    initial.torsion_angle,
+    np.linspace(0.0, 1.0, 101),
+    flow="sine-gordon",
+    sign=initial.sign,
+    initial_frame=initial.frames[0],
+)
+
+configurations = evolution.configurations()
+print(np.ptp(evolution.first_hamiltonian))
+print(np.linalg.norm(configurations[-1].closure_residual))
+```
+
+The integrable API uses the Cayley curvature
+`kappa = 2*tan(phi/2)`. `sign=1` means periodic/oriented binormals and
+`sign=-1` means anti-periodic/anti-oriented binormals. The two mKdV flows are
+available for both signs; the sine--Gordon flow is defined only for `sign=-1`.
