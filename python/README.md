@@ -35,13 +35,51 @@ interaction and make sure the notebook kernel points at the project environment.
 - `ExplicitConstructionWithTheta.ipynb` demonstrates analytic theta-function
   solutions.
 - `Animation.ipynb` explores animation utilities.
-- `IntegrableDeformations.ipynb` demonstrates curvature reconstruction, both
-  mKdV flows, the anti-periodic sine--Gordon flow, and numerical conservation.
+- `IntegrableDeformations.ipynb` demonstrates the positive mKdV hierarchy,
+  its spectral Hamiltonians and lifts, the anti-periodic sine--Gordon flow,
+  and numerical conservation.
 - `KaleidocycleProperties.ipynb` inspects structural properties and residuals.
 - `AnimationScalarProperties.ipynb` computes and plots animation diagnostics.
 - `BackendComparison.ipynb` compares NumPy and optional JAX solver backends.
 - `LocalDoF.ipynb` analyzes infinitesimal and finite degrees of freedom of the
   constraint-preserving motion at a given configuration.
+
+## Interactive web studio
+
+`web/` contains a three.js studio for the integrable hierarchy and constrained
+editing of closed constant-torsion kaleidocycles. When it is served over HTTP,
+the built-in menu reads the same canonical JSON files in
+`data/kaleidocycles/` that notebooks load through `load_sample()`.
+
+**[Open Kaleidocycle Studio](https://shizuo-kaji.github.io/Kaleidocycle/)**
+
+```bash
+python -m http.server 8000   # from this directory
+```
+
+then open <http://localhost:8000/web/>. Directly opening `web/index.html` also
+works, using a generated static fallback because browsers do not permit a
+`file://` page to fetch neighbouring JSON files. See `web/README.md` for details.
+
+### Shared notebook/web samples
+
+```python
+from kaleidocycle import export_sample, load_sample
+
+cycle = load_sample("generic_k15_noncritical")
+
+# Promote a notebook result to the canonical built-in catalogue.
+export_sample(
+    cycle,
+    "my_named_sample",
+    metadata={"kind": "generic", "non_critical": True},
+)
+```
+
+`export_json()` now writes a top-level `name` too; an explicit `name=...` wins,
+then `Kaleidocycle.name`, and finally the output filename is used. After adding
+or changing canonical samples, run `python scripts/build_web_samples.py` to
+refresh `catalog.json` and the generated fallback used only in direct-file mode.
 
 ## Package Layout
 
@@ -52,9 +90,9 @@ interaction and make sure the notebook kernel points at the project environment.
   generation, frame cleaning, alignment, sorting, curve conversion, and
   `KaleidocycleAnimation`.
 - `src/kaleidocycle/integrable.py`: twisted curvature coordinates, discrete
-  Frenet reconstruction, compatible lifts, two commuting mKdV fields, the
-  anti-periodic sine--Gordon field, Hamiltonians, Poisson operator, variational
-  recurrence, QRT invariant, and high-accuracy time integration.
+  Frenet reconstruction, the positive mKdV hierarchy and compatible lifts,
+  twisted-Floquet Hamiltonians, the anti-periodic sine--Gordon field, Poisson
+  operator, variational recurrence, QRT invariant, and time integration.
 - `src/kaleidocycle/theta.py`: Jacobi theta functions, closure equations,
   analytic curves, theta binormals, and theta animations.
 - `src/kaleidocycle/constraints.py`: unit norm, closure, alignment, constant
@@ -70,6 +108,8 @@ interaction and make sure the notebook kernel points at the project environment.
 - `src/kaleidocycle/visualization.py`: centreline, hinge, band, tetrahedron,
   paper-model, energy, and vertex-value plotting.
 - `src/kaleidocycle/io.py`: JSON and CSV import/export.
+- `src/kaleidocycle/samples.py`: shared named-sample catalogue, promotion, and
+  presentable generic-sample selection.
 - `src/kaleidocycle/report.py`: formatted diagnostic reports.
 
 ## Core Properties
@@ -287,5 +327,6 @@ print(np.linalg.norm(configurations[-1].closure_residual))
 
 The integrable API uses the Cayley curvature
 `kappa = 2*tan(phi/2)`. `sign=1` means periodic/oriented binormals and
-`sign=-1` means anti-periodic/anti-oriented binormals. The two mKdV flows are
-available for both signs; the sine--Gordon flow is defined only for `sign=-1`.
+`sign=-1` means anti-periodic/anti-oriented binormals. Every positive mKdV flow
+is available through `flow="mkdvN"` (or `flow=N`) for both signs; the
+sine--Gordon flow is defined only for `sign=-1`.

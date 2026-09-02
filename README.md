@@ -9,6 +9,14 @@ repository gathers asset needed to model, simulate, and fabricate these
 mechanisms: Python tooling, Maple/Mathematica notebooks,
 paper templates, and 3D-printable parts.
 
+## Interactive demo
+
+**[Open Kaleidocycle Studio](https://shizuo-kaji.github.io/Kaleidocycle/)**
+
+The studio runs the positive mKdV hierarchy and semi-discrete sine–Gordon flow,
+and supports constraint-preserving vertex and torsion-angle editing. Its built-in
+configurations share the JSON catalogue used by the Python notebooks.
+
 ## Repository Tour
 - [`python/`](python/) — Python scripts (package sources under
   `src/kaleidocycle/`, notebooks, examples)

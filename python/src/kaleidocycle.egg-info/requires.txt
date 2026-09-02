@@ -9,6 +9,7 @@ ruff>=0.5.0
 hypothesis>=6.92
 jupyterlab>=4.2
 ipywidgets>=8.1
+ipympl>=0.9
 jax>=0.4.25
 jaxlib>=0.4.25
 

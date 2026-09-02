@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "default": "generic_k15_noncritical",
+  "samples": [
+    {
+      "name": "generic_k15_noncritical",
+      "file": "generic_k15_noncritical.json",
+      "n": 15,
+      "oriented": false,
+      "kind": "generic",
+      "non_critical": true
+    },
+    {
+      "name": "generic_k8_nonoriented",
+      "file": "generic_k8_nonoriented.json",
+      "n": 8,
+      "oriented": false,
+      "kind": "generic",
+      "non_critical": true
+    },
+    {
+      "name": "generic_k9_oriented",
+      "file": "generic_k9_oriented.json",
+      "n": 9,
+      "oriented": true,
+      "kind": "generic",
+      "non_critical": true
+    },
+    {
+      "name": "mobius_k7_oriented",
+      "file": "mobius_k7_oriented.json",
+      "n": 7,
+      "oriented": true,
+      "kind": "mobius",
+      "non_critical": false
+    },
+    {
+      "name": "mobius_k8_nonoriented",
+      "file": "mobius_k8_nonoriented.json",
+      "n": 8,
+      "oriented": false,
+      "kind": "mobius",
+      "non_critical": false
+    },
+    {
+      "name": "mobius_k9_oriented",
+      "file": "mobius_k9_oriented.json",
+      "n": 9,
+      "oriented": true,
+      "kind": "mobius",
+      "non_critical": false
+    }
+  ]
+}

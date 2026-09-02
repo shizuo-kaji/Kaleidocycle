@@ -54,6 +54,7 @@ class Kaleidocycle:
         curve: np.ndarray | None = None,
         tangents: np.ndarray | None = None,
         normals: np.ndarray | None = None,
+        name: str | None = None,
         seed: int | None = None,
         solver_options: dict | None = None,
     ):
@@ -69,6 +70,7 @@ class Kaleidocycle:
             curve: 3D curve points, shape (n+1, 3)
             tangents: Tangent vectors, shape (n, 3)
             normals: Normal vectors (currently not implemented), shape (n, 3)
+            name: Stable name used by JSON catalogues and exports.
             seed: Random seed for initialization (only used when n is provided)
             solver_options: Optional dict with solver parameters when creating from n.
                            Special option: {"mode": "random_feasible"} creates a generic
@@ -99,16 +101,20 @@ class Kaleidocycle:
         from .constraints import ConstraintConfig
 
         # Check that exactly one initialization parameter is provided
-        init_params = sum([
-            n is not None,
-            hinges is not None,
-            curve is not None,
-            tangents is not None,
-            normals is not None,
-        ])
+        init_params = sum(
+            [
+                n is not None,
+                hinges is not None,
+                curve is not None,
+                tangents is not None,
+                normals is not None,
+            ]
+        )
 
         if init_params == 0:
-            raise ValueError("Must provide one of: n, hinges, curve, tangents, or normals")
+            raise ValueError(
+                "Must provide one of: n, hinges, curve, tangents, or normals"
+            )
         if init_params > 1:
             raise ValueError("Can only initialize from one parameter")
 
@@ -122,6 +128,7 @@ class Kaleidocycle:
 
         # Initialize metadata dictionary
         self.metadata: dict[str, any] = {}
+        self.name = name
 
         # Initialize from n by creating optimized or random feasible kaleidocycle
         if n is not None:
@@ -134,15 +141,21 @@ class Kaleidocycle:
             self.oriented = oriented
 
             # Check if random_feasible mode is requested
-            mode = solver_options.get("mode", "optimize") if solver_options else "optimize"
+            mode = (
+                solver_options.get("mode", "optimize") if solver_options else "optimize"
+            )
 
             if mode == "random_feasible":
                 # Create random feasible kaleidocycle via Newton projection
-                self.hinges = self._create_random_feasible(n, oriented, seed, solver_options)
+                self.hinges = self._create_random_feasible(
+                    n, oriented, seed, solver_options
+                )
                 self.metadata: dict[str, any] = {"created_from": "random_feasible"}
             else:
                 # Create optimized kaleidocycle
-                self.hinges = self._create_optimized(n, oriented, seed, solver_options, config=self.config)
+                self.hinges = self._create_optimized(
+                    n, oriented, seed, solver_options, config=self.config
+                )
                 self.metadata: dict[str, any] = {"created_from": "optimize_cycle"}
 
             self.n = n
@@ -160,18 +173,24 @@ class Kaleidocycle:
         if hinges is not None:
             self.hinges = np.asarray(hinges, dtype=float)
             if self.hinges.ndim != 2 or self.hinges.shape[1] != 3:
-                raise ValueError(f"hinges must have shape (n+1, 3), got {self.hinges.shape}")
+                raise ValueError(
+                    f"hinges must have shape (n+1, 3), got {self.hinges.shape}"
+                )
 
         elif curve is not None:
             curve_arr = np.asarray(curve, dtype=float)
             if curve_arr.ndim != 2 or curve_arr.shape[1] != 3:
-                raise ValueError(f"curve must have shape (n+1, 3), got {curve_arr.shape}")
+                raise ValueError(
+                    f"curve must have shape (n+1, 3), got {curve_arr.shape}"
+                )
             self.hinges = curve_to_binormals(curve_arr)
 
         elif tangents is not None:
             tangents_arr = np.asarray(tangents, dtype=float)
             if tangents_arr.ndim != 2 or tangents_arr.shape[1] != 3:
-                raise ValueError(f"tangents must have shape (n, 3), got {tangents_arr.shape}")
+                raise ValueError(
+                    f"tangents must have shape (n, 3), got {tangents_arr.shape}"
+                )
             self.hinges = tangents_to_binormals(tangents_arr)
 
         elif normals is not None:
@@ -188,7 +207,6 @@ class Kaleidocycle:
             self.oriented = is_oriented(self.hinges)
         else:
             self.oriented = oriented
-
 
     @staticmethod
     def _create_random_feasible(
@@ -349,6 +367,7 @@ class Kaleidocycle:
     def config(self) -> ConstraintConfig:
         """Return a default ConstraintConfig for this kaleidocycle."""
         from .constraints import ConstraintConfig
+
         if self._config is None:
             self._config = ConstraintConfig(
                 oriented=self.oriented,
@@ -492,7 +511,7 @@ class Kaleidocycle:
         self,
         props: list[str] | None = None,
         *,
-        config: 'ConstraintConfig | None' = None,
+        config: "ConstraintConfig | None" = None,
     ) -> None:
         """Compute specified properties and store in metadata.
 
@@ -518,38 +537,38 @@ class Kaleidocycle:
 
         # Default to computing all properties
         if props is None:
-            props = ['all']
+            props = ["all"]
 
-        compute_all = 'all' in props
+        compute_all = "all" in props
 
         # Compute geometric properties
-        if compute_all or 'geometric' in props:
+        if compute_all or "geometric" in props:
             cosines = pairwise_cosines(self.hinges)
             curvatures = pairwise_curvature(self.hinges, self.tangents)
             torsions = compute_torsion(self.hinges)
 
             geometric = {
-                'mean_cosine': float(np.mean(cosines)),
-                'std_cosines': float(np.std(cosines)),
-                'cosines': cosines,
-                'curvatures': curvatures,
-                'mean_curvature': float(np.mean(curvatures)),
-                'torsions': torsions,
-                'mean_torsion': float(np.mean(torsions)),
+                "mean_cosine": float(np.mean(cosines)),
+                "std_cosines": float(np.std(cosines)),
+                "cosines": cosines,
+                "curvatures": curvatures,
+                "mean_curvature": float(np.mean(curvatures)),
+                "torsions": torsions,
+                "mean_torsion": float(np.mean(torsions)),
             }
 
             # Try to compute axis
             try:
                 axis = compute_axis(self.hinges, curvatures)
-                geometric['axis'] = axis
+                geometric["axis"] = axis
             except ValueError as e:
-                geometric['axis'] = None
-                geometric['axis_error'] = str(e)
+                geometric["axis"] = None
+                geometric["axis_error"] = str(e)
 
-            self.metadata['geometric'] = geometric
+            self.metadata["geometric"] = geometric
 
         # Compute topological properties
-        if compute_all or 'topological' in props:
+        if compute_all or "topological" in props:
             try:
                 writhe_val = writhe(self.curve)
             except ValueError as e:
@@ -561,31 +580,33 @@ class Kaleidocycle:
                 twist_val = None
 
             topological = {
-                'writhe': writhe_val,
-                'twist': twist_val,
+                "writhe": writhe_val,
+                "twist": twist_val,
             }
 
             if writhe_val is not None and twist_val is not None:
-                topological['linking_number'] = writhe_val + twist_val
+                topological["linking_number"] = writhe_val + twist_val
             else:
-                topological['linking_number'] = None
+                topological["linking_number"] = None
 
-            self.metadata['topological'] = topological
+            self.metadata["topological"] = topological
 
         # Compute energies
-        if compute_all or 'energies' in props:
+        if compute_all or "energies" in props:
             energies = {
-                'bending': bending_energy(self.tangents),
-                'dipole': dipole_energy(self.hinges, self.curve),
-                'torsion': torsion_energy(self.hinges),
+                "bending": bending_energy(self.tangents),
+                "dipole": dipole_energy(self.hinges, self.curve),
+                "torsion": torsion_energy(self.hinges),
             }
-            self.metadata['energies'] = energies
+            self.metadata["energies"] = energies
 
         # Compute constraint violations
-        if compute_all or 'constraints' in props:
+        if compute_all or "constraints" in props:
             if config is None:
                 if compute_all:
-                    raise ValueError("config parameter is required to compute constraints")
+                    raise ValueError(
+                        "config parameter is required to compute constraints"
+                    )
                 else:
                     # Skip constraints if not computing all
                     pass
@@ -601,21 +622,21 @@ class Kaleidocycle:
                         sum_sq = float(np.sum(res_array**2))
                         total_penalty += sum_sq
                         violations[name] = {
-                            'max_abs': max_violation,
-                            'sum_sq': sum_sq,
-                            'residuals': res_array,
+                            "max_abs": max_violation,
+                            "sum_sq": sum_sq,
+                            "residuals": res_array,
                         }
 
-                self.metadata['constraints'] = {
-                    'config': config,
-                    'violations': violations,
-                    'total_penalty': total_penalty,
+                self.metadata["constraints"] = {
+                    "config": config,
+                    "violations": violations,
+                    "total_penalty": total_penalty,
                 }
 
     def is_feasible(
         self,
         tolerance: float = 1e-4,
-        config: 'ConstraintConfig | None' = None,
+        config: "ConstraintConfig | None" = None,
     ) -> bool:
         """Check if the kaleidocycle satisfies constraints within tolerance.
 
@@ -654,11 +675,11 @@ class Kaleidocycle:
 
     def is_stationary(
         self,
-        energy: 'Literal["bending", "mean_cos"]' = 'bending',
+        energy: 'Literal["bending", "mean_cos"]' = "bending",
         *,
         tolerance: float = 1e-6,
         finite_diff_step: float = 1e-8,
-        config: 'ConstraintConfig | None' = None,
+        config: "ConstraintConfig | None" = None,
     ) -> dict:
         """Check if the kaleidocycle is at a stationary point for the given energy.
 
@@ -753,7 +774,7 @@ class Kaleidocycle:
 
     def local_dof(
         self,
-        config: 'ConstraintConfig | None' = None,
+        config: "ConstraintConfig | None" = None,
         *,
         tol: float | None = None,
         return_basis: bool = False,
@@ -812,7 +833,7 @@ class Kaleidocycle:
 
     def finite_motion_dof(
         self,
-        config: 'ConstraintConfig | None' = None,
+        config: "ConstraintConfig | None" = None,
         *,
         step_size: float = 1e-3,
         n_steps: int = 20,
@@ -888,7 +909,7 @@ class Kaleidocycle:
     def find_nearby_stationary(
         self,
         energy: 'Literal["bending", "mean_cos"]' = "mean_cos",
-        config: 'ConstraintConfig | None' = None,
+        config: "ConstraintConfig | None" = None,
         *,
         tol: float = 1e-10,
         maxfev: int = 2000,
@@ -896,7 +917,7 @@ class Kaleidocycle:
         max_newton_iter: int = 100,
         finite_diff_step: float = 1e-8,
         backend: str | None = None,
-    ) -> 'Kaleidocycle':
+    ) -> "Kaleidocycle":
         """Return a new Kaleidocycle at the nearest critical point of ``energy``.
 
         Wraps :func:`kaleidocycle.optimality.find_nearby_stationary`. The
@@ -914,10 +935,15 @@ class Kaleidocycle:
             config = self.config
 
         info = find_nearby_stationary(
-            self.hinges, config, energy,
-            tol=tol, maxfev=maxfev,
-            correction_tol=correction_tol, max_newton_iter=max_newton_iter,
-            finite_diff_step=finite_diff_step, backend=backend,
+            self.hinges,
+            config,
+            energy,
+            tol=tol,
+            maxfev=maxfev,
+            correction_tol=correction_tol,
+            max_newton_iter=max_newton_iter,
+            finite_diff_step=finite_diff_step,
+            backend=backend,
         )
         new_kc = Kaleidocycle(hinges=info["hinges"], oriented=self.oriented)
         new_kc.metadata["stationary_info"] = {
@@ -931,7 +957,7 @@ class Kaleidocycle:
 
     def follow_motion(
         self,
-        config: 'ConstraintConfig | None' = None,
+        config: "ConstraintConfig | None" = None,
         *,
         direction_index: int = 0,
         step_size: float = 5e-4,
@@ -956,19 +982,23 @@ class Kaleidocycle:
             config = self.config
 
         return follow_motion(
-            self.hinges, config,
+            self.hinges,
+            config,
             direction_index=direction_index,
-            step_size=step_size, n_steps=n_steps,
+            step_size=step_size,
+            n_steps=n_steps,
             bidirectional=bidirectional,
-            correction_tol=correction_tol, max_newton_iter=max_newton_iter,
+            correction_tol=correction_tol,
+            max_newton_iter=max_newton_iter,
             subtract_rigid=subtract_rigid,
             nullspace_tol=nullspace_tol,
-            finite_diff_step=finite_diff_step, backend=backend,
+            finite_diff_step=finite_diff_step,
+            backend=backend,
         )
 
     def report(
         self,
-        config: 'ConstraintConfig | None' = None,
+        config: "ConstraintConfig | None" = None,
         *,
         precision: int = 6,
     ) -> str:
@@ -1003,7 +1033,7 @@ class Kaleidocycle:
 
     def plot(
         self,
-        ax: 'Axes | None' = None,
+        ax: "Axes | None" = None,
         *,
         width: float = 0.15,
         facecolor: str = "lightblue",
@@ -1012,7 +1042,7 @@ class Kaleidocycle:
         linewidth: float = 0.5,
         title: str | None = None,
         show_curve: bool = False,
-    ) -> 'Axes':
+    ) -> "Axes":
         """Plot the band structure of the kaleidocycle.
 
         This method wraps `plot_band` to provide a convenient way to visualize
@@ -1083,6 +1113,7 @@ def normalize_hinges(raw: Iterable[Iterable[float]]) -> HingeFrame:
         raise ValueError("hinge vector with zero length detected")
     return HingeFrame(arr / norms)
 
+
 def binormals_to_tangents(
     binormals: np.ndarray,
     *,
@@ -1119,6 +1150,7 @@ def binormals_to_tangents(
 
     return T
 
+
 def is_oriented(hinges: np.ndarray) -> bool:
     """Check if the kaleidocycle is oriented based on hinge vectors.
 
@@ -1142,6 +1174,7 @@ def is_oriented(hinges: np.ndarray) -> bool:
     cosine = np.clip(np.dot(first, last), -1.0, 1.0)
 
     return cosine > 0.9999  # Threshold for "approximately equal"
+
 
 def tangents_to_curve(
     tangents: np.ndarray,
@@ -1199,9 +1232,7 @@ def align_first_three(curve: np.ndarray) -> np.ndarray:
     """
     c = np.asarray(curve, dtype=float)
     if c.ndim != 2 or c.shape[1] != 3 or c.shape[0] < 3:
-        raise ValueError(
-            f"expected (n_pts>=3, 3) curve, got shape {c.shape}"
-        )
+        raise ValueError(f"expected (n_pts>=3, 3) curve, got shape {c.shape}")
     c = c - c[0]
 
     v1 = c[1]
@@ -1217,11 +1248,13 @@ def align_first_three(curve: np.ndarray) -> np.ndarray:
         R1 = np.eye(3) if cos_a > 0 else np.diag([-1.0, -1.0, 1.0])
     else:
         axis = axis / sin_a
-        K = np.array([
-            [0.0, -axis[2], axis[1]],
-            [axis[2], 0.0, -axis[0]],
-            [-axis[1], axis[0], 0.0],
-        ])
+        K = np.array(
+            [
+                [0.0, -axis[2], axis[1]],
+                [axis[2], 0.0, -axis[0]],
+                [-axis[1], axis[0], 0.0],
+            ]
+        )
         R1 = np.eye(3) + sin_a * K + (1.0 - cos_a) * (K @ K)
     c = c @ R1.T
 
@@ -1230,11 +1263,13 @@ def align_first_three(curve: np.ndarray) -> np.ndarray:
     if r >= 1e-12:
         cos_b = y / r
         sin_b = -z / r
-        R2 = np.array([
-            [1.0, 0.0, 0.0],
-            [0.0, cos_b, -sin_b],
-            [0.0, sin_b, cos_b],
-        ])
+        R2 = np.array(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, cos_b, -sin_b],
+                [0.0, sin_b, cos_b],
+            ]
+        )
         c = c @ R2.T
     return c
 
@@ -1527,9 +1562,7 @@ def pairwise_curvature(
     # Compute curvature as signed angle between consecutive tangents
     K = np.zeros(n)
     for i in range(n):
-        cos_angle = np.clip(
-            np.dot(T[mod_n(i - 1)], T[mod_n(i)]), -1.0, 1.0
-        )
+        cos_angle = np.clip(np.dot(T[mod_n(i - 1)], T[mod_n(i)]), -1.0, 1.0)
         K[i] = s[i] * np.arccos(cos_angle)
 
     return K
@@ -2001,7 +2034,9 @@ def from_curvatures_and_cos(
             raise ValueError(f"initial_tangent must have shape (3,), got {T[0].shape}")
         # Check perpendicularity
         if np.abs(np.dot(T[0], B[0])) > 1e-6:
-            raise ValueError("initial_tangent must be perpendicular to initial_binormal")
+            raise ValueError(
+                "initial_tangent must be perpendicular to initial_binormal"
+            )
         T[0] = T[0] / np.linalg.norm(T[0])
 
     # First step: compute B[1] from B[0] and T[0]

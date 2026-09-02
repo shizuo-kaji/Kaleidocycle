@@ -5,9 +5,11 @@ src/kaleidocycle/animation.py
 src/kaleidocycle/constraints.py
 src/kaleidocycle/energies.py
 src/kaleidocycle/geometry.py
+src/kaleidocycle/integrable.py
 src/kaleidocycle/io.py
 src/kaleidocycle/optimality.py
 src/kaleidocycle/report.py
+src/kaleidocycle/rigidity.py
 src/kaleidocycle/solvers.py
 src/kaleidocycle/theta.py
 src/kaleidocycle/transform.py
@@ -27,6 +29,7 @@ tests/test_constraints.py
 tests/test_curve_generation.py
 tests/test_generate_animation_integration.py
 tests/test_geometry.py
+tests/test_integrable.py
 tests/test_io.py
 tests/test_jax_gradients.py
 tests/test_jax_solvers.py
@@ -37,6 +40,7 @@ tests/test_newton.py
 tests/test_optimality.py
 tests/test_plot_band_animation.py
 tests/test_report.py
+tests/test_rigidity.py
 tests/test_theta.py
 tests/test_transform.py
 tests/test_visualization.py

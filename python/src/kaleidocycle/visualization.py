@@ -1414,7 +1414,8 @@ def _plot_vertex_values_2d(
     """
     import matplotlib.pyplot as plt
     from matplotlib import animation
-    from matplotlib import cm
+    from matplotlib import colormaps
+    from matplotlib.cm import ScalarMappable
     from matplotlib.colors import Normalize
     from matplotlib.collections import LineCollection
 
@@ -1455,7 +1456,7 @@ def _plot_vertex_values_2d(
         vmax = np.max(values)
 
     norm = Normalize(vmin=vmin, vmax=vmax)
-    colormap = cm.get_cmap(cmap)
+    colormap = colormaps.get_cmap(cmap)
 
     # Create colored line segments
     points = np.array([vertex_indices, values]).T.reshape(-1, 1, 2)
@@ -1491,7 +1492,7 @@ def _plot_vertex_values_2d(
     ax.set_ylim(vmin - 0.1 * y_range, vmax + 0.1 * y_range)
 
     if show_colorbar:
-        mappable = cm.ScalarMappable(norm=norm, cmap=colormap)
+        mappable = ScalarMappable(norm=norm, cmap=colormap)
         mappable.set_array(values)
         cbar = plt.colorbar(mappable, ax=ax)
         if colorbar_label:
@@ -1540,7 +1541,8 @@ def _create_vertex_animation_2d(
     """
     import matplotlib.pyplot as plt
     from matplotlib import animation
-    from matplotlib import cm
+    from matplotlib import colormaps
+    from matplotlib.cm import ScalarMappable
     from matplotlib.colors import Normalize
     from matplotlib.collections import LineCollection
 
@@ -1554,7 +1556,7 @@ def _create_vertex_animation_2d(
         vmax = np.max(values)
 
     norm = Normalize(vmin=vmin, vmax=vmax)
-    colormap = cm.get_cmap(cmap)
+    colormap = colormaps.get_cmap(cmap)
 
     # Create figure
     fig, ax = plt.subplots(figsize=figsize)
@@ -1573,7 +1575,7 @@ def _create_vertex_animation_2d(
 
     # Add colorbar
     if show_colorbar:
-        mappable = cm.ScalarMappable(norm=norm, cmap=colormap)
+        mappable = ScalarMappable(norm=norm, cmap=colormap)
         mappable.set_array(values)
         cbar = plt.colorbar(mappable, ax=ax)
         if colorbar_label:
@@ -1721,7 +1723,8 @@ def plot_vertex_values(
     """
     import matplotlib.pyplot as plt
     from matplotlib import animation
-    from matplotlib import cm
+    from matplotlib import colormaps
+    from matplotlib.cm import ScalarMappable
     from matplotlib.colors import Normalize
 
     # Convert to numpy array
@@ -1810,7 +1813,7 @@ def plot_vertex_values(
 
         # Create colormap normalization
         norm = Normalize(vmin=vmin, vmax=vmax)
-        colormap = cm.get_cmap(cmap)
+        colormap = colormaps.get_cmap(cmap)
 
         # Plot colored line segments
         for i in range(len(pts) - 1):
@@ -1844,7 +1847,7 @@ def plot_vertex_values(
         )
 
         if show_colorbar:
-            mappable = cm.ScalarMappable(norm=norm, cmap=colormap)
+            mappable = ScalarMappable(norm=norm, cmap=colormap)
             mappable.set_array(values_array)
             cbar = plt.colorbar(mappable, ax=ax, shrink=0.8, pad=0.1)
             if colorbar_label:
@@ -1906,7 +1909,8 @@ def _create_vertex_animation(
     """
     import matplotlib.pyplot as plt
     from matplotlib import animation
-    from matplotlib import cm
+    from matplotlib import colormaps
+    from matplotlib.cm import ScalarMappable
     from matplotlib.colors import Normalize
 
     n_frames, n_vertices = values.shape
@@ -1919,7 +1923,7 @@ def _create_vertex_animation(
         vmax = np.max(values)
 
     norm = Normalize(vmin=vmin, vmax=vmax)
-    colormap = cm.get_cmap(cmap)
+    colormap = colormaps.get_cmap(cmap)
 
     # Create figure and axes
     fig = plt.figure(figsize=figsize)
@@ -1938,7 +1942,7 @@ def _create_vertex_animation(
 
     # Add colorbar
     if show_colorbar:
-        mappable = cm.ScalarMappable(norm=norm, cmap=colormap)
+        mappable = ScalarMappable(norm=norm, cmap=colormap)
         mappable.set_array(values)
         cbar = plt.colorbar(mappable, ax=ax, shrink=0.8, pad=0.1)
         if colorbar_label:

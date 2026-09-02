@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable, Optional
 
 import numpy as np
@@ -35,6 +35,25 @@ def _reshape(vec: NDArray[np.float64]) -> NDArray[np.float64]:
     if arr.size % 3 != 0:
         raise ValueError("flat hinge vector must be divisible by 3")
     return arr.reshape(-1, 3)
+
+
+def _config_with_target_torsion(
+    config: ConstraintConfig,
+    target_torsion: float | None,
+) -> ConstraintConfig:
+    """Return a config that fixes the common adjacent-hinge dot product."""
+    if target_torsion is None:
+        return config
+
+    target = float(target_torsion)
+    if not np.isfinite(target) or not -1.0 <= target <= 1.0:
+        raise ValueError("target_torsion must be a finite value in [-1, 1]")
+
+    return replace(
+        config,
+        constant_torsion=True,
+        reference_torsion=target,
+    )
 
 
 def _get_objective(name: str, target=0, oriented=True) -> ObjectiveFunc:
@@ -407,6 +426,7 @@ def optimize_cycle(
     config: ConstraintConfig,
     *,
     objective: str | ObjectiveFunc = "mean_cos",
+    target_torsion: float | None = None,
     options: SolverOptions | None = None,
     backend: Optional[str] = None,
 ) -> OptimizationSummary:
@@ -416,6 +436,11 @@ def optimize_cycle(
         initial_hinges: Initial hinge configuration, shape (N+1, 3)
         config: Constraint configuration
         objective: Objective function to minimize (energy functional name or callable)
+        target_torsion: Target value of ``h_i · h_(i+1)``, i.e. the cosine
+                        of the common torsion angle. When provided, this hard
+                        constraint overrides ``config.reference_torsion`` and
+                        enables ``config.constant_torsion`` for this call. The
+                        input ``config`` object is not modified.
         options: Solver options (method, penalty weight, constraint solver flag, etc.)
         backend: Backend to use ('numpy' or 'jax'). If None, uses current global backend.
                  Both backends use scipy.optimize.minimize.
@@ -445,11 +470,16 @@ def optimize_cycle(
 
         >>> # JAX backend - autodiff for exact gradients
         >>> result = optimize_cycle(hinges, config, objective='bending', backend='jax')
+
+        >>> # Find a feasible cycle whose constant torsion cosine is 0.2
+        >>> result = optimize_cycle(hinges, config, target_torsion=0.2)
     """
+
+    effective_config = _config_with_target_torsion(config, target_torsion)
 
     # warnings for inconsistent config
     n = len(initial_hinges) - 1
-    if isinstance(objective, str):
+    if isinstance(objective, str) and target_torsion is None:
         if objective == "mean_cos":
             if (config.oriented and (n % 2 == 0)) or (not config.oriented and (n % 2 == 1)):
                 warnings.warn(
@@ -481,7 +511,13 @@ def optimize_cycle(
 
     if backend_obj.name == 'jax':
         # Use scipy optimizer with JAX autodiff for exact gradients/Hessians
-        return _optimize_cycle_jax_scipy(initial_hinges, config, objective, objective_fn, opts)
+        return _optimize_cycle_jax_scipy(
+            initial_hinges,
+            effective_config,
+            objective,
+            objective_fn,
+            opts,
+        )
 
     # NumPy backend: use scipy optimization
     if opts.use_constraint_solver:
@@ -490,7 +526,7 @@ def optimize_cycle(
             hinges = _reshape(flat)
             return objective_fn(hinges)
 
-        constraints = _build_constraint_dicts(config)
+        constraints = _build_constraint_dicts(effective_config)
 
         result = minimize(
             energy_func,
@@ -504,9 +540,11 @@ def optimize_cycle(
     else:
         # Use penalty-based optimization
         def loss(flat: NDArray[np.float64]) -> float:
-            hinges = enforce_terminal(_reshape(flat), oriented=config.oriented)
+            hinges = enforce_terminal(
+                _reshape(flat), oriented=effective_config.oriented
+            )
             energy = objective_fn(hinges)
-            penalty = constraint_penalty(hinges, config)
+            penalty = constraint_penalty(hinges, effective_config)
             return float(energy + opts.penalty_weight * penalty)
 
         result = minimize(
@@ -515,12 +553,14 @@ def optimize_cycle(
             method=opts.method,
             options={"maxiter": opts.maxiter, "disp": False},
         )
-        final_hinges = enforce_terminal(_reshape(result.x), oriented=config.oriented)
+        final_hinges = enforce_terminal(
+            _reshape(result.x), oriented=effective_config.oriented
+        )
 
     return OptimizationSummary(
         hinges=final_hinges,
         energy=objective_fn(final_hinges),
-        penalty=constraint_penalty(final_hinges, config),
+        penalty=constraint_penalty(final_hinges, effective_config),
         _scipy_result=result,
     )
 

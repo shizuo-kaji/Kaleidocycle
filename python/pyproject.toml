@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kaleidocycle"
-version = "0.0.0"
+version = "0.1.0"
 description = "Modular Python toolkit for Kaleidocycle geometry, energies, and visualization."
 readme = "README.md"
 authors = [{ name = "Kaleidocycle Lab" }]
@@ -27,6 +27,7 @@ dev = [
     "hypothesis>=6.92",
     "jupyterlab>=4.2",
     "ipywidgets>=8.1",
+    "ipympl>=0.9",
     # Include JAX for development testing
     "jax>=0.4.25",
     "jaxlib>=0.4.25",

@@ -11,7 +11,12 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .constraints import ConstraintConfig, constraint_residuals
-from .geometry import tangents_to_curve, binormals_to_tangents, mean_cosine, pairwise_cosines
+from .geometry import (
+    tangents_to_curve,
+    binormals_to_tangents,
+    mean_cosine,
+    pairwise_cosines,
+)
 
 if TYPE_CHECKING:
     from .geometry import Kaleidocycle
@@ -39,9 +44,10 @@ def _convert_numpy_to_lists(obj: Any) -> Any:
 
 
 def export_json(
-    hinges: Union[NDArray[np.float64], 'Kaleidocycle'],
+    hinges: Union[NDArray[np.float64], "Kaleidocycle"],
     filepath: str | Path,
     *,
+    name: str | None = None,
     metadata: Dict[str, Any] | None = None,
     include_derived: bool = True,
     config: ConstraintConfig | None = None,
@@ -52,6 +58,8 @@ def export_json(
         hinges: Either a hinge vectors array of shape (n+1, 3) or a Kaleidocycle instance.
                 If a Kaleidocycle instance is provided, its hinges and metadata are used.
         filepath: Path to save JSON file
+        name: Stable top-level JSON name. Defaults to the object's name, the
+              metadata name, or the output filename stem, in that order.
         metadata: Optional metadata dictionary (oriented, seed, energy, etc.).
                   If hinges is a Kaleidocycle, this is merged with its metadata.
         include_derived: If True, include derived quantities (curve, tangents)
@@ -69,15 +77,17 @@ def export_json(
     from .geometry import Kaleidocycle
 
     filepath = Path(filepath)
+    object_name: str | None = None
 
     # Handle Kaleidocycle instance
     if isinstance(hinges, Kaleidocycle):
         kc = hinges
         hinges_array = kc.hinges
+        object_name = kc.name
 
         # Merge metadata from Kaleidocycle with provided metadata
         kc_metadata = {
-            "oriented": str(kc.oriented), # to prevent "TypeError: Object of type bool is not JSON serializable"
+            "oriented": kc.oriented,
             "n": kc.n,
         }
 
@@ -96,13 +106,20 @@ def export_json(
     else:
         hinges = np.asarray(hinges, dtype=float)
 
+    metadata_name = metadata.get("name") if metadata is not None else None
+    resolved_name = name or object_name or metadata_name or filepath.stem
+    if not isinstance(resolved_name, str) or not resolved_name.strip():
+        raise ValueError("name must be a non-empty string")
+    resolved_name = resolved_name.strip()
+
     data: Dict[str, Any] = {
+        "name": resolved_name,
         "hinges": hinges.tolist(),
         "n": len(hinges) - 1,  # Number of tetrahedra
     }
 
     if metadata is not None:
-        data["metadata"] = metadata
+        data["metadata"] = _convert_numpy_to_lists(metadata)
 
     # Compute and include cosine statistics
     cos_mean = float(mean_cosine(hinges, wrap=False))
@@ -116,8 +133,8 @@ def export_json(
     if config is not None:
         residuals = constraint_residuals(hinges, config)
         penalties = {}
-        for name, residual in residuals.items():
-            penalties[name] = float(np.sum(residual**2))
+        for constraint_name, residual in residuals.items():
+            penalties[constraint_name] = float(np.sum(residual**2))
         penalties["total"] = sum(penalties.values())
         data["penalties"] = penalties
 
@@ -127,11 +144,11 @@ def export_json(
         data["tangents"] = tangents.tolist()
         data["curve"] = curve.tolist()
 
-    with open(filepath, 'w') as f:
+    with open(filepath, "w") as f:
         json.dump(data, f, indent=2)
 
 
-def import_json(filepath: str | Path) -> 'Kaleidocycle':
+def import_json(filepath: str | Path) -> "Kaleidocycle":
     """Import kaleidocycle configuration from JSON format.
 
     Args:
@@ -155,7 +172,7 @@ def import_json(filepath: str | Path) -> 'Kaleidocycle':
 
     filepath = Path(filepath)
 
-    with open(filepath, 'r') as f:
+    with open(filepath, "r") as f:
         data = json.load(f)
 
     # Extract hinges
@@ -166,13 +183,15 @@ def import_json(filepath: str | Path) -> 'Kaleidocycle':
     oriented = metadata.get("oriented", None)
     # conver string to bool if it's a string
     if isinstance(oriented, str):
-        oriented = oriented.lower() == 'true'
+        oriented = oriented.lower() == "true"
     if oriented is None:
         from .geometry import is_oriented
+
         oriented = is_oriented(hinges)
 
     # Create Kaleidocycle instance
-    kc = Kaleidocycle(hinges=hinges, oriented=oriented)
+    name = data.get("name", metadata.get("name", filepath.stem))
+    kc = Kaleidocycle(hinges=hinges, oriented=oriented, name=name)
 
     # Store additional data in metadata (convert oriented back to boolean if needed)
     if metadata:
@@ -200,7 +219,7 @@ def import_json(filepath: str | Path) -> 'Kaleidocycle':
 
 
 def export_csv(
-    hinges: Union[NDArray[np.float64], 'Kaleidocycle'],
+    hinges: Union[NDArray[np.float64], "Kaleidocycle"],
     filepath: str | Path,
     *,
     header: bool = True,
@@ -236,11 +255,11 @@ def export_csv(
     else:
         hinges = np.asarray(hinges, dtype=float)
 
-    with open(filepath, 'w', newline='') as f:
+    with open(filepath, "w", newline="") as f:
         writer = csv.writer(f)
 
         if header:
-            writer.writerow(['hx', 'hy', 'hz'])
+            writer.writerow(["hx", "hy", "hz"])
 
         for hinge in hinges:
             writer.writerow([f"{val:.16e}" for val in hinge])
@@ -257,12 +276,12 @@ def import_csv(filepath: str | Path) -> NDArray[np.float64]:
     """
     filepath = Path(filepath)
 
-    with open(filepath, 'r') as f:
+    with open(filepath, "r") as f:
         reader = csv.reader(f)
 
         # Check if first row is header
         first_row = next(reader)
-        if first_row[0].lower() in ['hx', 'h_x', 'x']:
+        if first_row[0].lower() in ["hx", "h_x", "x"]:
             # Skip header
             rows = list(reader)
         else:

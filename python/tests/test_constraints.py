@@ -116,6 +116,49 @@ def test_constant_torsion_validation() -> None:
     assert np.linalg.norm(residuals["closure"]) < 2e-3
 
 
+def test_optimize_cycle_finds_feasible_target_torsion() -> None:
+    """A requested torsion cosine is enforced as a hard constraint."""
+    target_torsion = 0.2
+    initial = random_hinges(7, seed=19, oriented=False).as_array()
+    config = ConstraintConfig(oriented=False, constant_torsion=False)
+
+    result = optimize_cycle(
+        initial,
+        config,
+        target_torsion=target_torsion,
+        options=SolverOptions(
+            maxiter=1000,
+            use_constraint_solver=True,
+            constraint_method="SLSQP",
+        ),
+    )
+
+    assert result.success
+    assert result.penalty < 1e-10
+    np.testing.assert_allclose(
+        pairwise_cosines(result.hinges),
+        target_torsion,
+        rtol=0.0,
+        atol=1e-6,
+    )
+    assert config.constant_torsion is False
+    assert config.reference_torsion is None
+
+
+@pytest.mark.parametrize("target_torsion", [-1.01, 1.01, np.inf, np.nan])
+def test_optimize_cycle_rejects_invalid_target_torsion(
+    target_torsion: float,
+) -> None:
+    initial = random_hinges(6, seed=42).as_array()
+
+    with pytest.raises(ValueError, match="target_torsion"):
+        optimize_cycle(
+            initial,
+            ConstraintConfig(),
+            target_torsion=target_torsion,
+        )
+
+
 def test_constraint_solver_vs_penalty() -> None:
     """Test that constraint solver produces valid results and satisfies constraints better than penalty method."""
     initial = random_hinges(6, seed=42).as_array()

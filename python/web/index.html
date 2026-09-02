@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111714">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23141b17'/%3E%3Cpath d='M19 14v36m0-18 23-18M19 32l25 18' fill='none' stroke='%23c9f28c' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E">
+  <title>Kaleidocycle Studio</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #eff5ee;
+      --muted: #98a59b;
+      --faint: #647069;
+      --base: #0b100e;
+      --panel: rgba(20, 27, 23, 0.94);
+      --panel-solid: #141b17;
+      --surface: rgba(255, 255, 255, 0.045);
+      --surface-hover: rgba(255, 255, 255, 0.075);
+      --line: rgba(233, 245, 235, 0.12);
+      --line-strong: rgba(233, 245, 235, 0.22);
+      --lime: #c9f28c;
+      --mint: #66d3a0;
+      --blue: #75bff2;
+      --amber: #f1bc6a;
+      --red: #f18a7b;
+      --shadow: 0 22px 70px rgba(0, 0, 0, 0.34);
+      --radius: 16px;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body {
+      overflow: hidden;
+      color: var(--ink);
+      background: var(--base);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    button, select, input { font: inherit; }
+    button, select, input[type="range"] { accent-color: var(--lime); }
+    button:focus-visible, select:focus-visible, input:focus-visible {
+      outline: 2px solid var(--lime);
+      outline-offset: 2px;
+    }
+
+    .app {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 348px;
+    }
+
+    #viewport {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 35% 28%, rgba(74, 112, 88, 0.18), transparent 32%),
+        linear-gradient(145deg, #111916 0%, #080c0a 72%);
+    }
+    #viewport canvas { display: block; width: 100%; height: 100%; }
+
+    .brand {
+      position: absolute;
+      z-index: 4;
+      top: 22px;
+      left: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none;
+    }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      background: rgba(16, 23, 19, 0.72);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(12px);
+      color: var(--lime);
+      font: 600 17px/1 Georgia, serif;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 620;
+      letter-spacing: 0.01em;
+    }
+    .brand p { margin: 1px 0 0; color: var(--muted); font-size: 11px; }
+
+    .view-tools {
+      position: absolute;
+      z-index: 4;
+      top: 22px;
+      right: 22px;
+      display: flex;
+      gap: 7px;
+    }
+    .icon-button, .ghost-button, .primary-button, .segmented button {
+      border: 1px solid var(--line);
+      color: var(--ink);
+      background: rgba(17, 24, 20, 0.78);
+      cursor: pointer;
+      transition: 150ms ease;
+      transition-property: background, border-color, color, transform;
+    }
+    .icon-button:hover, .ghost-button:hover, .segmented button:hover {
+      background: var(--surface-hover);
+      border-color: var(--line-strong);
+    }
+    .icon-button:active, .ghost-button:active, .primary-button:active {
+      transform: translateY(1px);
+    }
+    .icon-button {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      font-size: 17px;
+      backdrop-filter: blur(12px);
+    }
+
+    .status-rack {
+      position: absolute;
+      z-index: 4;
+      left: 24px;
+      bottom: 22px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      max-width: calc(100% - 48px);
+      pointer-events: none;
+    }
+    .pill {
+      min-height: 29px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(13, 19, 16, 0.72);
+      backdrop-filter: blur(12px);
+      font-size: 11px;
+    }
+    .pill strong { color: var(--ink); font-weight: 560; }
+    .signal {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 10px rgba(102, 211, 160, 0.75);
+    }
+    .pill.warn .signal { background: var(--amber); }
+    .pill.bad .signal { background: var(--red); }
+
+    .gesture-hint {
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: 22px;
+      transform: translateX(-50%);
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(13, 19, 16, 0.66);
+      backdrop-filter: blur(12px);
+      font-size: 11px;
+      pointer-events: none;
+      transition: opacity 250ms ease;
+    }
+
+    #dropZone, #fatalError {
+      position: absolute;
+      z-index: 10;
+      inset: 16px;
+      display: none;
+      place-items: center;
+      border: 1px dashed var(--lime);
+      border-radius: 18px;
+      color: var(--ink);
+      background: rgba(9, 14, 11, 0.9);
+      backdrop-filter: blur(16px);
+      font-size: 15px;
+    }
+    #dropZone.visible, #fatalError.visible { display: grid; }
+    #fatalError { padding: 32px; border-color: var(--red); text-align: center; }
+
+    .panel {
+      min-width: 0;
+      height: 100%;
+      overflow: hidden auto;
+      padding: 22px 20px 34px;
+      border-left: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+    .panel-heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 2px 20px;
+    }
+    .eyebrow {
+      margin: 0 0 3px;
+      color: var(--lime);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+    .panel-heading h2 { margin: 0; font-size: 20px; font-weight: 570; }
+    .panel-heading .version { color: var(--faint); font: 10px ui-monospace, monospace; }
+
+    .card {
+      margin: 0 0 12px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 0 13px;
+    }
+    .card-title h3 {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+    .card-title span { color: var(--faint); font-size: 10px; }
+
+    label { display: block; }
+    .control { margin-top: 12px; }
+    .control:first-child { margin-top: 0; }
+    .label-line {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .label-line strong {
+      color: var(--ink);
+      font: 520 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    select {
+      width: 100%;
+      height: 36px;
+      padding: 0 31px 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--ink);
+      background: var(--panel-solid);
+      cursor: pointer;
+    }
+    input[type="range"] { width: 100%; height: 18px; margin: 0; cursor: pointer; }
+
+    .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .button-grid.three { grid-template-columns: 1.3fr 1fr 1fr; }
+    .ghost-button, .primary-button {
+      min-height: 36px;
+      padding: 7px 9px;
+      border-radius: 10px;
+    }
+    .primary-button {
+      border-color: transparent;
+      color: #17200f;
+      background: var(--lime);
+      font-weight: 650;
+    }
+    .primary-button:hover { background: #d5f6a4; }
+    .primary-button.running { color: #1f1711; background: var(--amber); }
+    button:disabled, select:disabled, input:disabled { opacity: 0.42; cursor: not-allowed; }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      padding: 3px;
+      border-radius: 11px;
+      background: rgba(0, 0, 0, 0.19);
+    }
+    .segmented button { min-height: 30px; border: 0; border-radius: 8px; }
+    .segmented button.active { color: #17200f; background: var(--lime); }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 29px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .switch-row input { width: 16px; height: 16px; margin: 0; }
+    .hint {
+      margin: 10px 0 0;
+      color: var(--faint);
+      font-size: 10.5px;
+      line-height: 1.5;
+    }
+    .hint em { color: var(--muted); font-style: normal; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--line);
+    }
+    .metric { padding: 9px 10px; background: var(--panel-solid); }
+    .metric span { display: block; color: var(--faint); font-size: 9px; text-transform: uppercase; }
+    .metric strong {
+      display: block;
+      overflow: hidden;
+      margin-top: 2px;
+      color: var(--ink);
+      font: 500 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+      text-overflow: ellipsis;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 20;
+      left: 50%;
+      bottom: 26px;
+      max-width: min(420px, calc(100vw - 32px));
+      padding: 9px 13px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      background: #1c251f;
+      box-shadow: var(--shadow);
+      color: var(--ink);
+      opacity: 0;
+      transform: translate(-50%, 10px);
+      pointer-events: none;
+      transition: 180ms ease;
+    }
+    .toast.visible { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 840px) {
+      body { overflow: auto; }
+      .app { height: auto; min-height: 100%; grid-template-columns: 1fr; }
+      #viewport { height: 58vh; min-height: 420px; }
+      .panel { height: auto; overflow: visible; border: 0; border-top: 1px solid var(--line); }
+      .gesture-hint { top: auto; bottom: 62px; }
+      .status-rack { bottom: 18px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <main id="viewport" aria-label="Interactive three-dimensional kaleidocycle">
+      <div class="brand">
+        <div class="brand-mark">K</div>
+        <div>
+          <h1>Kaleidocycle Studio</h1>
+          <p>Constraint-aware integrable motion</p>
+        </div>
+      </div>
+
+      <div class="view-tools" aria-label="View tools">
+        <button class="icon-button" id="resetView" title="Reset the camera" aria-label="Reset the camera">⌂</button>
+        <button class="icon-button" id="captureView" title="Save a PNG image" aria-label="Save a PNG image">⇩</button>
+      </div>
+
+      <div class="gesture-hint" id="gestureHint">Drag a vertex to sculpt · drag the background to orbit · scroll to zoom</div>
+      <div class="status-rack" aria-live="polite">
+        <div class="pill"><span class="signal"></span><strong id="cycleStatus">Loading</strong></div>
+        <div class="pill" id="closurePill">Closure <strong id="closureStatus">—</strong></div>
+        <div class="pill" id="flowPill">Flow <strong id="flowStatus">Paused</strong></div>
+      </div>
+      <div id="dropZone">Drop a kaleidocycle JSON file here</div>
+      <div id="fatalError"></div>
+    </main>
+
+    <aside class="panel" aria-label="Kaleidocycle controls">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Geometry laboratory</p>
+          <h2>Shape &amp; motion</h2>
+        </div>
+        <span class="version">STATIC · v2</span>
+      </div>
+
+      <section class="card">
+        <div class="card-title"><h3>Configuration</h3><span id="configurationTag">—</span></div>
+        <label class="control">
+          <span class="label-line"><span>Built-in sample</span></span>
+          <select id="sampleSelect" aria-label="Built-in sample"></select>
+        </label>
+        <div class="button-grid control">
+          <button class="ghost-button" id="openFile">Open JSON…</button>
+          <button class="ghost-button" id="exportFile">Export JSON</button>
+        </div>
+        <input id="fileInput" type="file" accept=".json,application/json" hidden>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h3>Integrable flow</h3><span id="flowTime">t = 0</span></div>
+        <label class="control">
+          <span class="label-line"><span>Flow family</span></span>
+          <select id="flowKind">
+            <option value="hierarchy">Positive mKdV hierarchy</option>
+            <option value="sine-gordon">Semi-discrete sine–Gordon</option>
+          </select>
+        </label>
+        <label class="control" id="orderControl">
+          <span class="label-line"><span>Hierarchy order</span><strong id="flowOrderValue">X¹</strong></span>
+          <input id="flowOrder" type="range" min="1" max="8" step="1" value="1">
+        </label>
+        <label class="control">
+          <span class="label-line"><span>Animation rate</span><strong id="flowRateValue">1.00×</strong></span>
+          <input id="flowRate" type="range" min="0.15" max="3" step="0.05" value="1">
+        </label>
+        <div class="button-grid three control">
+          <button class="primary-button" id="playFlow">Run flow</button>
+          <button class="ghost-button" id="reverseFlow">Reverse</button>
+          <button class="ghost-button" id="stepFlow">Single step</button>
+        </div>
+        <p class="hint" id="flowHint">All orders up to the finite Cayley–Hamilton bound <em>N</em> are generated from the same Floquet hierarchy as the Python implementation.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h3>Interactive geometry</h3><span id="editState">Ready</span></div>
+        <label class="control">
+          <span class="label-line"><span>Torsion angle μ</span><strong id="torsionValue">—</strong></span>
+          <input id="torsion" type="range" min="0.2" max="2.94" step="0.002">
+        </label>
+        <div class="button-grid control">
+          <button class="ghost-button" id="resetShape">Reset shape</button>
+          <button class="ghost-button" id="setInitial">Use as initial</button>
+        </div>
+        <p class="hint">Pull a highlighted centre-line vertex. A damped tangent-space solve moves the rest of the ring, then projects it back to exact closure and monodromy. Torsion changes use continuation along the constrained family.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h3>Appearance</h3><span>Display</span></div>
+        <label class="control">
+          <span class="label-line"><span>Ribbon width</span><strong id="widthValue">0.70</strong></span>
+          <input id="ribbonWidth" type="range" min="0.2" max="1.15" step="0.01" value="0.7">
+        </label>
+        <label class="control">
+          <span class="label-line"><span>Surface opacity</span><strong id="opacityValue">0.86</strong></span>
+          <input id="surfaceOpacity" type="range" min="0.25" max="1" step="0.01" value="0.86">
+        </label>
+        <label class="switch-row control"><span>Show centre-line</span><input id="showCentreline" type="checkbox" checked></label>
+        <label class="switch-row"><span>Show hinge axes</span><input id="showHinges" type="checkbox" checked></label>
+        <label class="switch-row"><span>Show editing handles</span><input id="showHandles" type="checkbox" checked></label>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h3>Diagnostics</h3><span>Live</span></div>
+        <div class="metrics">
+          <div class="metric"><span>Closure error</span><strong id="metricClosure">—</strong></div>
+          <div class="metric"><span>Monodromy error</span><strong id="metricMonodromy">—</strong></div>
+          <div class="metric"><span>Hamiltonian E₁</span><strong id="metricE1">—</strong></div>
+          <div class="metric"><span>Hamiltonian E₂</span><strong id="metricE2">—</strong></div>
+        </div>
+      </section>
+
+      <p class="hint">This build is fully local: open <em>index.html</em> directly. No HTTP server, package install or network connection is required.</p>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="vendor/three.min.js"></script>
+  <script src="sample-fallback.js"></script>
+  <script src="sim.js"></script>
+  <script src="viewer.js"></script>
+</body>
+</html>

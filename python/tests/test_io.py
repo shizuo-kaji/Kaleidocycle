@@ -1,5 +1,6 @@
 """Tests for import/export functionality."""
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -38,6 +39,7 @@ def test_json_export_import(tmp_path: Path) -> None:
 
     # Verify - loaded is now a Kaleidocycle instance
     assert loaded.n == 6
+    assert loaded.name == "test"
     assert np.allclose(loaded.hinges, hinges)
     assert loaded.metadata["seed"] == 42
     assert loaded.metadata["test_value"] == 123.456
@@ -67,6 +69,19 @@ def test_json_export_minimal(tmp_path: Path) -> None:
     # metadata dict still exists but should not have extra fields beyond cos_mean/cos_std
     assert "curve" not in loaded.metadata
     assert "tangents" not in loaded.metadata
+
+
+def test_json_export_writes_and_round_trips_explicit_name(tmp_path: Path) -> None:
+    """The stable sample name is a top-level JSON field and object attribute."""
+    hinges = random_hinges(4, seed=10, oriented=False).as_array()
+    filepath = tmp_path / "filename.json"
+
+    export_json(hinges, filepath, name="descriptive_name")
+
+    with filepath.open(encoding="utf-8") as handle:
+        payload = json.load(handle)
+    assert payload["name"] == "descriptive_name"
+    assert import_json(filepath).name == "descriptive_name"
 
 
 def test_csv_export_import(tmp_path: Path) -> None:
@@ -107,7 +122,7 @@ def test_csv_import_invalid_columns(tmp_path: Path) -> None:
     filepath = tmp_path / "invalid.csv"
 
     # Create invalid CSV with 4 columns instead of 3
-    with open(filepath, 'w') as f:
+    with open(filepath, "w") as f:
         f.write("1.0,2.0,3.0,4.0\n")
         f.write("5.0,6.0,7.0,8.0\n")
 
@@ -141,7 +156,9 @@ def test_json_export_with_penalties(tmp_path: Path) -> None:
     hinges = random_hinges(6, seed=42, oriented=True).as_array()
     filepath = tmp_path / "with_penalties.json"
 
-    config = ConstraintConfig(oriented=True, enforce_anchors=False, constant_torsion=True)
+    config = ConstraintConfig(
+        oriented=True, enforce_anchors=False, constant_torsion=True
+    )
 
     # Export with config
     export_json(hinges, filepath, config=config, include_derived=True)
@@ -161,11 +178,14 @@ def test_json_export_with_penalties(tmp_path: Path) -> None:
         assert isinstance(value, float)
 
     # Verify total is sum of individual penalties
-    individual_sum = sum(v for k, v in loaded.metadata["penalties"].items() if k != "total")
+    individual_sum = sum(
+        v for k, v in loaded.metadata["penalties"].items() if k != "total"
+    )
     assert np.isclose(loaded.metadata["penalties"]["total"], individual_sum)
 
 
 # Tests for Kaleidocycle instance export
+
 
 def test_json_export_kaleidocycle_instance(tmp_path: Path) -> None:
     """Test JSON export with Kaleidocycle instance."""
@@ -307,7 +327,7 @@ def test_json_export_kaleidocycle_computed_properties(tmp_path: Path) -> None:
     kc = Kaleidocycle(hinges=hinges, oriented=True)
 
     # Compute some properties
-    kc.compute(['geometric', 'topological'])
+    kc.compute(["geometric", "topological"])
 
     filepath = tmp_path / "kaleidocycle_computed.json"
 
