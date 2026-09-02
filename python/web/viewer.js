@@ -474,9 +474,6 @@
     controls.flowOrder.disabled = !hierarchy;
     controls.orderControl.setAttribute("aria-hidden", String(!hierarchy));
     controls.flowOrderValue.textContent = `X(${controls.flowOrder.value})`;
-    controls.flowHint.innerHTML = hierarchy
-      ? "All orders up to the finite Cayley–Hamilton bound <em>N</em> are generated from the same Floquet hierarchy as the Python implementation."
-      : "The semi-discrete sine–Gordon flow is a separate negative flow; hierarchy order does not apply.";
     controls.flowRateValue.textContent = `${Number(controls.flowRate.value).toFixed(2)}×`;
     element("flowStatus").textContent = running
       ? `${direction < 0 ? "−" : "+"} ${flowLabel()}`

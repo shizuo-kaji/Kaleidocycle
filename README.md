@@ -13,9 +13,8 @@ paper templates, and 3D-printable parts.
 
 **[Open Kaleidocycle Studio](https://shizuo-kaji.github.io/Kaleidocycle/)**
 
-The studio runs the positive mKdV hierarchy and semi-discrete sine–Gordon flow,
-and supports constraint-preserving vertex and torsion-angle editing. Its built-in
-configurations share the JSON catalogue used by the Python notebooks.
+The studio runs the animation by mKdV hierarchy and semi-discrete sine–Gordon flows,
+and supports interactive editing of vertex positions and torsion-angles.
 
 ## Repository Tour
 - [`python/`](python/) — Python scripts (package sources under

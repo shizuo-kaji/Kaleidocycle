@@ -14,9 +14,7 @@
 
 **[Kaleidocycle Studio をブラウザで開く](https://shizuo-kaji.github.io/Kaleidocycle/)**
 
-正の mKdV 階層と半離散 sine–Gordon flow による変形を動かせます．頂点のドラッグや
-捩率角の変更も，閉曲線・モノドロミー・定捩率条件を保つように全体を変形します．
-組み込み形状は `python/data/kaleidocycles/` の JSON と Python notebook で共有されています．
+mKdV 階層と半離散 sine–Gordon flow による変形をアニメーションします．頂点のドラッグや捩率角の変更によりインタラクティブに動かすこともできます．
 
 # リポジトリ構成
 - [`3d_model/`](3d_model/) には3Dプリンタで出力可能なモデルがあります.
