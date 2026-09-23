@@ -38,6 +38,8 @@ interaction and make sure the notebook kernel points at the project environment.
 - `IntegrableDeformations.ipynb` demonstrates the positive mKdV hierarchy,
   its spectral Hamiltonians and lifts, the anti-periodic sine--Gordon flow,
   and numerical conservation.
+- `SelfCrossing.ipynb` certifies a K12 self-crossing under the first mKdV flow,
+  with static diagnostics and an interactive 3D time slider.
 - `KaleidocycleProperties.ipynb` inspects structural properties and residuals.
 - `AnimationScalarProperties.ipynb` computes and plots animation diagnostics.
 - `BackendComparison.ipynb` compares NumPy and optional JAX solver backends.
@@ -45,6 +47,12 @@ interaction and make sure the notebook kernel points at the project environment.
   constraint-preserving motion at a given configuration.
 
 ## Interactive web studio
+
+Select **Self-crossing K12 · first mKdV flow** in the studio's built-in menu
+for the pre-contact counterexample (`counterexample_k12_self_crossing`). Its
+certified decimal inputs are in `data/counterexamples/`, with the certificate
+and interactive diagnostics in `notebooks/SelfCrossing.ipynb`. Rebuild the
+shared sample and offline fallback with `python scripts/build_self_crossing.py`.
 
 `web/` contains a three.js studio for the integrable hierarchy and constrained
 editing of closed constant-torsion kaleidocycles. When it is served over HTTP,

@@ -47,6 +47,11 @@ Time integration uses RK4. The time step is automatically reduced when a high
 hierarchy field is large, and a small periodic constraint correction controls
 floating-point drift. The displayed `t` is the actual integrated flow time.
 
+The Diagnostics panel updates **Wr** (standard Gauss writhe) and
+**Lk = Wr + Nμ/(2π)** with each flow step or edit. Anti-oriented cycles can have
+half-integer Lk. Both values display `—` at a detected self-contact or when the
+closure error exceeds `1e-6`; the normalisation matches `SelfCrossing.ipynb`.
+
 ## Interactive initial geometry
 
 The geometry editor operates on curvature coordinates rather than moving mesh
@@ -124,3 +129,15 @@ The web editor deliberately replaces the old Rapier rigid-body simulation.
 That simulation approximated hinge constraints dynamically; the new editor is
 instead designed around the closed constant-torsion locus and the integrable
 flows studied in the paper.
+
+## Self-crossing counterexample
+
+Select **Self-crossing K12 · first mKdV flow** in the studio's built-in menu.
+This loads `counterexample_k12_self_crossing`, an embedded pre-contact
+configuration at `t = -0.002` on the certified K12 first-flow orbit. Evolve it
+with `X(1)` to explore the crossing.
+
+`notebooks/SelfCrossing.ipynb` executes the interval certificate and provides
+static diagnostics and an interactive view. Rebuild the shared sample and
+studio's offline fallback with `python scripts/build_self_crossing.py` from
+`data/counterexamples/mkdv_self_crossing_k12.json`.

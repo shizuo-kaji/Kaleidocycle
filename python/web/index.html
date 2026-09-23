@@ -330,6 +330,7 @@
     }
     .metric { padding: 9px 10px; background: var(--panel-solid); }
     .metric span { display: block; color: var(--faint); font-size: 9px; text-transform: uppercase; }
+    .metric span.math-label { text-transform: none; }
     .metric strong {
       display: block;
       overflow: hidden;
@@ -480,6 +481,8 @@
           <div class="metric"><span>Monodromy error</span><strong id="metricMonodromy">—</strong></div>
           <div class="metric"><span>Hamiltonian E₁</span><strong id="metricE1">—</strong></div>
           <div class="metric"><span>Hamiltonian E₂</span><strong id="metricE2">—</strong></div>
+          <div class="metric" title="Gauss writhe; undefined at self-contact"><span class="math-label">Wr</span><strong id="metricWr">—</strong></div>
+          <div class="metric" title="Lk = Wr + Nμ/(2π); half-integer for anti-oriented cycles; undefined at self-contact"><span class="math-label">Lk</span><strong id="metricLk">—</strong></div>
         </div>
       </section>
 

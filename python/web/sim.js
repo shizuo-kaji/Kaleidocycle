@@ -22,6 +22,73 @@
     return scale(a, 1 / length);
   }
 
+  function segmentDistance(a, b, c, d) {
+    const edgeA = subtract(b, a);
+    const edgeB = subtract(d, c);
+    const delta = subtract(a, c);
+    const aa = dot(edgeA, edgeA);
+    const bb = dot(edgeB, edgeB);
+    const ab = dot(edgeA, edgeB);
+    const ar = dot(edgeA, delta);
+    const br = dot(edgeB, delta);
+    const clamp = (value) => Math.max(0, Math.min(1, value));
+    const candidates = [];
+    for (const u of [0, 1]) candidates.push([u, clamp((br + u * ab) / bb)]);
+    for (const v of [0, 1]) candidates.push([clamp((v * ab - ar) / aa), v]);
+    const determinant = aa * bb - ab * ab;
+    if (determinant > 1e-14 * aa * bb) {
+      const u = (ab * br - bb * ar) / determinant;
+      const v = (aa * br - ab * ar) / determinant;
+      if (u >= 0 && u <= 1 && v >= 0 && v <= 1) candidates.push([u, v]);
+    }
+    return Math.min(...candidates.map(([u, v]) =>
+      norm(subtract(add(delta, scale(edgeA, u)), scale(edgeB, v))),
+    ));
+  }
+
+  function gaussWrithe(vertices, contactTolerance = 1e-10) {
+    // Same solid-angle convention as collisions.gauss_writhe in the notebook.
+    // The terminal vertex is repeated; tolerate small closure drift in the UI.
+    const n = vertices.length - 1;
+    if (n < 3 || vertices.some((point) => point.some((x) => !Number.isFinite(x)))) {
+      return NaN;
+    }
+    if (norm(subtract(vertices[n], vertices[0])) > 1e-6) return NaN;
+    for (let i = 0; i < n; i += 1) {
+      if (norm(subtract(vertices[i + 1], vertices[i])) < EPSILON) return NaN;
+    }
+    const solidAngle = (a, b, c) => {
+      const u = normalise(a);
+      const v = normalise(b);
+      const w = normalise(c);
+      return 2 * Math.atan2(
+        dot(u, cross(v, w)), 1 + dot(u, v) + dot(v, w) + dot(w, u),
+      );
+    };
+    let total = 0;
+    for (let i = 0; i < n; i += 1) {
+      for (let j = i + 2; j < n; j += 1) {
+        if (i === 0 && j === n - 1) continue;
+        const distance = segmentDistance(
+          vertices[i], vertices[i + 1], vertices[j], vertices[j + 1],
+        );
+        if (distance <= contactTolerance) {
+          return NaN;
+        }
+        const a = subtract(vertices[i], vertices[j]);
+        const b = subtract(vertices[i + 1], vertices[j]);
+        const c = subtract(vertices[i + 1], vertices[j + 1]);
+        const d = subtract(vertices[i], vertices[j + 1]);
+        const angle = solidAngle(a, b, c) + solidAngle(a, c, d);
+        const period = 4 * Math.PI;
+        const wrapped =
+          ((angle + 2 * Math.PI) % period + period) % period - 2 * Math.PI;
+        total -= wrapped / (2 * Math.PI);
+      }
+    }
+    return total;
+  }
+
   function matrixMultiply(a, b) {
     const result = new Array(9).fill(0);
     for (let row = 0; row < 3; row += 1) {
@@ -727,9 +794,13 @@
       const monodromy = Math.hypot(
         ...finalFrame.map((value, index) => value - target[index]),
       );
+      const writhe = gaussWrithe(this.configuration.vertices);
+      const twist = this.n * this.torsionAngle / (2 * Math.PI);
       return {
         closure,
         monodromy,
+        writhe,
+        linking: writhe + twist,
         hamiltonian1: firstHamiltonian(this.curvatures),
         hamiltonian2: secondHamiltonian(this.curvatures, this.sign),
       };
@@ -763,6 +834,7 @@
   global.Kaleidocycle = Object.freeze({
     Model,
     curvatureAngles,
+    gaussWrithe,
     hierarchyField,
     inferCycle,
     reconstruct,

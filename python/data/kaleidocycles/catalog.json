@@ -3,6 +3,14 @@
   "default": "generic_k15_noncritical",
   "samples": [
     {
+      "name": "counterexample_k12_self_crossing",
+      "file": "counterexample_k12_self_crossing.json",
+      "n": 12,
+      "oriented": false,
+      "kind": "counterexample",
+      "non_critical": false
+    },
+    {
       "name": "generic_k15_noncritical",
       "file": "generic_k15_noncritical.json",
       "n": 15,

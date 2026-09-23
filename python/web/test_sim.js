@@ -83,4 +83,31 @@ const edited = model.diagnostics();
 assert.ok(edited.closure < 1e-6);
 assert.ok(edited.monodromy < 1e-6);
 
+// Check standard normalisation and the K12 jump against the certified example.
+const crossing = new K.Model(fixture("counterexample_k12_self_crossing.json"));
+const twist = 12 * 1.2 / (2 * Math.PI);
+close([crossing.diagnostics().writhe, crossing.diagnostics().linking], [4.5 - twist, 4.5]);
+for (let index = 0; index < 40; index += 1) {
+  crossing.advanceFlow("hierarchy", 1, 0.0001);
+}
+close([crossing.diagnostics().writhe, crossing.diagnostics().linking], [2.5 - twist, 2.5]);
+crossing.restore();
+close([crossing.diagnostics().linking], [4.5]);
+
+const certificate = JSON.parse(fs.readFileSync(
+  path.join(__dirname, "..", "data", "counterexamples", "mkdv_self_crossing_k12.json"),
+  "utf8",
+));
+crossing.curvatures = certificate.center.slice(0, certificate.n).map(
+  (angle) => 2 * Math.tan(Number(angle) / 2),
+);
+crossing.update();
+assert.ok(Number.isNaN(crossing.diagnostics().writhe));
+assert.ok(Number.isNaN(crossing.diagnostics().linking));
+
+close([K.gaussWrithe([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 0]])], [0]);
+assert.ok(Number.isNaN(K.gaussWrithe(
+  [[0, 0, 0], [1, 1, 0], [0, 1, 0], [1, 0, 0], [0, 0, 0]],
+)));
+
 console.log("web/sim.js: all mathematical checks passed");

@@ -233,6 +233,7 @@
   }
 
   function friendlyName(key, data) {
+    if (data.metadata?.label) return data.metadata.label;
     const n = data.n || data.metadata?.n || "?";
     const family = key.startsWith("generic") ? "Generic" : "Möbius";
     const statedOrientation = data.metadata?.oriented;
@@ -387,6 +388,8 @@
     element("metricMonodromy").textContent = metric(diagnostics.monodromy);
     element("metricE1").textContent = metric(diagnostics.hamiltonian1);
     element("metricE2").textContent = metric(diagnostics.hamiltonian2);
+    element("metricWr").textContent = metric(diagnostics.writhe);
+    element("metricLk").textContent = metric(diagnostics.linking);
     element("closureStatus").textContent = diagnostics.closure.toExponential(1);
     const closurePill = element("closurePill");
     closurePill.classList.toggle("warn", diagnostics.closure >= 1e-6);
