@@ -76,8 +76,7 @@ and export functions for paper templates and motion studies.
 - プレスリリース:
   [任意個数の四面体に対してカライドサイクルの存在を数学的に証明](https://www.kyoto-u.ac.jp/ja/research-news/2026-05-19-3)
 - 鍛冶静雄, [動く折り紙「カライドサイクル」をめぐる機構学と幾何学の出会い](https://www.math.kyoto-u.ac.jp/alumni/bulletin9/kaji.pdf), 京都大学数学教室同窓会誌, Vol 9, 2025
-- 鍛冶静雄,
-  [ユークリッド空間への図形の配置と設計への応用](https://drive.google.com/file/d/1T9TYKBqkQ1LdtojkK5dp09Pkyl5XI_wF/view?usp=sharing)
+- 鍛冶静雄,[ユークリッド空間への図形の配置と設計への応用](https://www.mathsoc.jp/assets/pdf/publications/sugaku/sugaku78-3hyoushi.pdf), 雑誌「数学」第78巻 第3号, 2026
 - 鍛冶静雄,
   [曲線の幾何学から生まれた閉リンク機構](https://drive.google.com/file/d/1CtwQHpcM_HEn3ooKfJ5y40s_B99IqRwR/view?usp=sharing),
   2018年度精密工学会春季大会 シンポジウム資料集, pp. 62–65
