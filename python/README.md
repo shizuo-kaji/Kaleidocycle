@@ -38,6 +38,10 @@ interaction and make sure the notebook kernel points at the project environment.
 - `IntegrableDeformations.ipynb` demonstrates the positive mKdV hierarchy,
   its spectral Hamiltonians and lifts, the anti-periodic sine--Gordon flow,
   and numerical conservation.
+- `IntegrableTheorems.ipynb` is an interactive tour of Theorems A–E of
+  *Integrable deformations of Kaleidocycles*: dimension counts and rank loss,
+  commuting flows, the QRT curve, the torsion index of the elliptic families,
+  the global minimum and nearby fibres, and the continuum limit.
 - `SelfCrossing.ipynb` certifies a K12 self-crossing under the first mKdV flow,
   with static diagnostics and an interactive 3D time slider.
 - `KaleidocycleProperties.ipynb` inspects structural properties and residuals.
@@ -103,6 +107,10 @@ refresh `catalog.json` and the generated fallback used only in direct-file mode.
   Frenet reconstruction, the positive mKdV hierarchy and compatible lifts,
   twisted-Floquet Hamiltonians, the anti-periodic sine--Gordon field, Poisson
   operator, variational recurrence, QRT invariant, and time integration.
+- `src/kaleidocycle/elliptic.py`: Jacobi elliptic torsion-critical families
+  `kappa_n = A cn(omega + n delta; k)`, the torsion branch and closing angle,
+  closing moduli, the principal family and minimum torsion `mu_N`, the Jacobi
+  operator, the torsion Hessian (index theorem), and continuum constants.
 - `src/kaleidocycle/theta.py`: Jacobi theta functions, closure equations,
   analytic curves, theta binormals, and theta animations.
 - `src/kaleidocycle/constraints.py`: unit norm, closure, alignment, constant
@@ -342,6 +350,40 @@ The integrable API uses the Cayley curvature
 `sign=-1` means anti-periodic/anti-oriented binormals. Every positive mKdV flow
 is available through `flow="mkdvN"` (or `flow=N`) for both signs; the
 sine--Gordon flow is defined only for `sign=-1`.
+
+## Elliptic critical families
+
+The torsion-critical configurations are Jacobi elliptic families with an
+integer winding `m`. They close at explicit moduli, and the principal family
+`m = 3` realises the global minimum `mu_N` of the torsion angle of
+anti-oriented rings:
+
+```python
+from kaleidocycle import (
+    closing_moduli,
+    continuum_constants,
+    elliptic_family,
+    principal_family,
+    torsion_hessian,
+)
+
+family = principal_family(9)          # m = 3, closing modulus k_9
+print(family.torsion_angle)           # mu_9 = 0.945665469...
+hinges = family.binormals(phase=0.3)  # closed anti-oriented ring, shape (10, 3)
+
+# Index theorem: Hess(mu) modulo rotations has inertia (N-m-3, m-3, 1).
+for k in closing_moduli(13, 5):
+    saddle = elliptic_family(13, 5, k)
+    print(torsion_hessian(saddle.binormals(), sign=saddle.sign).inertia)
+
+print(continuum_constants())          # (k_inf, C_inf) = (0.63092..., 8.09349...)
+```
+
+`Kaleidocycle.local_dof()` and the other tangent-space methods use
+`Kaleidocycle.analysis_config`, which constrains the terminal hinge by the full
+3-vector alignment. At a regular closed configuration the default count is the
+design-space dimension `N - 5`; with `reference_torsion` set it is `N - 6`, or
+`N - 5` at torsion-critical configurations.
 
 ## 3D Printable CAD Models (Optional)
 
