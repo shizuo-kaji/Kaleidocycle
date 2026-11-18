@@ -588,8 +588,17 @@ def local_dof(
     # SVD-based rank / nullspace.
     U, s, Vt = np.linalg.svd(jacobian, full_matrices=True)
     if tol is None:
+        from .backends import get_backend
+
         max_sv = s[0] if s.size else 0.0
-        tol_eff = max(jacobian.shape) * np.finfo(float).eps * max(max_sv, 1.0)
+        scale = max(max_sv, 1.0)
+        tol_eff = max(jacobian.shape) * np.finfo(float).eps * scale
+        if get_backend(backend).name != "jax":
+            # A forward-difference Jacobian is only accurate to about
+            # step + eps/step (~3e-8 for the default step), so the NumPy
+            # machine-precision cutoff would count noise as rank.
+            fd_error = finite_diff_step + np.finfo(float).eps / finite_diff_step
+            tol_eff = max(tol_eff, 10.0 * fd_error * scale)
     else:
         tol_eff = float(tol)
     rank = int(np.sum(s > tol_eff))
@@ -614,14 +623,17 @@ def local_dof(
                 k_rigid = int(np.sum(s_r > 1e-10 * (s_r[0] if s_r.size else 1.0)))
                 q_r = u_r[:, :k_rigid]
                 rigid_dof = k_rigid
-                # Quotient out rigid: project null_basis orthogonally to q_r,
-                # then use SVD (rank-revealing) to extract the surviving basis.
-                projected = null_basis - q_r @ (q_r.T @ null_basis)
-                u_n, s_n, _ = np.linalg.svd(projected, full_matrices=False)
-                keep = int(
-                    np.sum(s_n > 1e-8 * (s_n[0] if s_n.size else 1.0))
-                )
-                reduced_basis = u_n[:, :keep]
+                # Quotient out rigid rotations inside ker J: keep the
+                # combinations N a with a orthogonal to N^T q_r. As q_r lies
+                # in span(N) up to the test above, N^T q_r has singular
+                # values close to 1, so exactly raw_dof - k_rigid directions
+                # survive. They stay in span(N), so no cutoff on noise is
+                # needed. Projecting N off q_r and thresholding the result
+                # would instead keep or drop the leftover rigid component,
+                # which is not in ker J, depending on that noise.
+                coupling = null_basis.T @ q_r  # (raw_dof, k_rigid)
+                u_c, _, _ = np.linalg.svd(coupling, full_matrices=True)
+                reduced_basis = null_basis @ u_c[:, k_rigid:]
 
     dof = reduced_basis.shape[1]
 
@@ -696,8 +708,8 @@ def finite_motion_dof(
     hinges: NDArray[np.float64],
     config: ConstraintConfig,
     *,
-    step_size: float = 1e-3,
-    n_steps: int = 20,
+    step_size: float = 1e-4,
+    n_steps: int = 10,
     n_samples: int | None = None,
     correction_tol: float = 1e-8,
     max_newton_iter: int = 50,
@@ -749,14 +761,22 @@ def finite_motion_dof(
         where ``k`` is the infinitesimal DoF; the first ``k`` are the
         infinitesimal basis columns themselves.
     correction_tol : float
-        Constraint residual tolerance for the Newton corrector.
+        Constraint residual tolerance for the Newton corrector. It is
+        capped at ``1e-3 * step_size**2``: a predictor step along a
+        tangent direction that does not integrate leaves a residual of
+        order ``step_size**2``, which a looser tolerance would accept
+        without correction and so count as a finite motion.
     max_newton_iter : int
         Maximum Newton iterations per corrector step.
     subtract_rigid : bool, default True
         Forward to :func:`local_dof` — when True, global rigid rotations
         are not counted (they are always finite motions).
     rank_tol : float
-        Relative singular-value cutoff for the displacement matrix.
+        Relative singular-value cutoff for the displacement matrix. The
+        curvature of a genuine one-parameter motion adds a second singular
+        value of relative size about ``n_steps * step_size * curvature / 2``,
+        so keep the path length ``n_steps * step_size`` small compared
+        with ``rank_tol``.
     seed : int, optional
         RNG seed for reproducible random direction sampling.
     return_paths : bool
@@ -790,13 +810,33 @@ def finite_motion_dof(
     is too large for the local curvature, so a small finite DoF should
     be cross-checked by shrinking ``step_size``.
 
+    Near a torsion-critical configuration the fixed-torsion Jacobian is
+    nearly singular, so prefer ``backend="jax"``: the noise of a
+    finite-difference Jacobian is amplified into spurious displacements of
+    relative size about ``rank_tol``.
+
+    The rank counts the linear span of the reachable directions. At a
+    singular point whose local variety is a cone (for example a saddle of
+    the torsion, where the fixed-torsion fibre is ``{|xi| = |eta|}``), that
+    span can exceed the dimension of the cone.
+
     Examples
     --------
-    >>> from kaleidocycle import Kaleidocycle
-    >>> kc = Kaleidocycle(n=8, oriented=True)
-    >>> info = finite_motion_dof(kc.hinges, kc.config, seed=0)
-    >>> info["finite_dof"]
-    1
+    The principal elliptic family is a nondegenerate minimum of the torsion,
+    so its fixed-torsion fibre is a circle although ``N - 5`` infinitesimal
+    motions exist:
+
+    >>> from kaleidocycle import ConstraintConfig, principal_family
+    >>> family = principal_family(9)
+    >>> config = ConstraintConfig(
+    ...     oriented=False, full_alignment=True,
+    ...     reference_torsion=family.torsion_cosine,
+    ... )
+    >>> info = finite_motion_dof(
+    ...     family.binormals(0.3), config, seed=0, backend="jax"
+    ... )
+    >>> info["infinitesimal_dof"], info["finite_dof"]
+    (4, 1)
     """
     from .constraints import constraint_residuals
 
@@ -831,6 +871,7 @@ def finite_motion_dof(
         }
 
     basis = inf_info["basis"].reshape(n_vars, k)
+    correction_tol = min(correction_tol, 1e-3 * step_size**2)
 
     if n_samples is None:
         n_samples = max(2 * k, 8)

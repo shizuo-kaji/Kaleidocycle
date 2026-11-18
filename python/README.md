@@ -289,7 +289,7 @@ if rig.self_stress_count:
     print(second.eigenvalues)
 
 fin = kc.finite_motion_dof(
-    config=cfg, seed=0, step_size=1e-3, n_steps=15, backend=BACKEND
+    config=cfg, seed=0, step_size=1e-4, n_steps=10, backend=BACKEND
 )
 print(f"finite DoF:        {fin['finite_dof']}")
 

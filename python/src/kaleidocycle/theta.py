@@ -817,6 +817,17 @@ def _binormal_norm_deviation(binormals: NDArray[np.float64]) -> float:
     return float(np.max(np.abs(norms - mean_norm)) / mean_norm)
 
 
+def _theta_binormals_consistent(
+    binormals: NDArray[np.float64], tol: float = 1e-8
+) -> bool:
+    """Whether evaluated theta binormals are unit vectors with equal torsion."""
+    if not np.all(np.isfinite(binormals)):
+        return False
+    norms = np.linalg.norm(binormals, axis=1)
+    dots = np.einsum("ij,ij->i", binormals[:-1], binormals[1:])
+    return bool(np.max(np.abs(norms - 1.0)) < tol and np.ptp(dots) < tol)
+
+
 def _normalize_binormals(binormals: NDArray[np.float64]) -> NDArray[np.float64]:
     """Normalize binormal rows, preserving Mathematica formula signs."""
     normalized = np.array(binormals, dtype=float, copy=True)
@@ -1048,6 +1059,20 @@ def generate_theta_binormals(
             binormals = _generate_theta_binormals_high_precision(
                 v, z, r, y, N, t, high_precision_dps
             )
+            if not _theta_binormals_consistent(binormals):
+                # ``G`` can vanish exactly at a sample (a vertex with zero
+                # curvature, e.g. t = z = 0 with y = N v / m).  Extra digits
+                # cannot resolve that 0/0, so take the symmetric limit in t,
+                # which is accurate to O(step**2).
+                step = 1e-12
+                binormals = 0.5 * (
+                    _generate_theta_binormals_high_precision(
+                        v, z, r, y, N, t + step, high_precision_dps
+                    )
+                    + _generate_theta_binormals_high_precision(
+                        v, z, r, y, N, t - step, high_precision_dps
+                    )
+                )
         except Exception:
             if not use_curve_fallback:
                 raise

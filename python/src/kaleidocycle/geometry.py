@@ -91,8 +91,8 @@ class Kaleidocycle:
 
             Create random feasible kaleidocycle (generic constraint manifold point):
             >>> kc = Kaleidocycle(10, oriented=False, solver_options={"mode": "random_feasible"}, seed=42)
-            >>> kc.local_dof()['dof']  # Should be N - 6 for generic point
-            4
+            >>> kc.local_dof()['dof']  # N - 5: closed designs with variable torsion
+            5
 
             Create from existing data:
             >>> kc = Kaleidocycle(hinges=hinges_array)
@@ -362,6 +362,22 @@ class Kaleidocycle:
         )
 
         return result.hinges
+
+    @property
+    def analysis_config(self) -> ConstraintConfig:
+        """``config`` with the full 3-vector alignment of ``h[0]`` and ``h[-1]``.
+
+        The scalar alignment of :attr:`config` is a suitable penalty for the
+        optimiser, but its Jacobian vanishes on the constraint set, which leaves
+        the terminal hinge unconstrained to first order. Tangent-space analyses
+        (DoF counts, stationarity, motion tracing) therefore default to this
+        configuration. With it, the regular closed design space with variable
+        torsion has dimension ``N - 5`` modulo rotations, and a fixed-torsion
+        fibre has dimension ``N - 6`` at non-critical torsion.
+        """
+        from dataclasses import replace
+
+        return replace(self.config, full_alignment=True)
 
     @property
     def config(self) -> ConstraintConfig:
@@ -761,7 +777,7 @@ class Kaleidocycle:
 
         # Use default config if not provided
         if config is None:
-            config = self.config
+            config = self.analysis_config
 
         # Delegate to the optimality module
         return check_stationarity(
@@ -792,7 +808,7 @@ class Kaleidocycle:
         gauge.
 
         Args:
-            config: Constraint configuration. If None, uses ``self.config``.
+            config: Constraint configuration. If None, uses ``self.analysis_config``.
             tol: Singular-value cutoff for rank determination. None lets
                 NumPy choose ``max(J.shape) * eps * max_sv``.
             return_basis: If True, return an orthonormal basis of the
@@ -809,17 +825,27 @@ class Kaleidocycle:
             removed), ``rank``, ``n_constraints``, ``n_variables``,
             ``singular_values``, ``tol``, and optionally ``basis``.
 
+        By default the constraint configuration is :attr:`analysis_config`,
+        in which the torsion may vary. The result is then ``N - 5`` at every
+        regular closed configuration (Theorem B of *Integrable deformations of
+        Kaleidocycles*). Pass a configuration with ``reference_torsion`` set to
+        count motions at fixed torsion: ``N - 6`` generically, and ``N - 5`` at
+        torsion-critical configurations, where the fixed-torsion Jacobian loses
+        one rank.
+
+        At irregular (folded) configurations, where two consecutive centre-line
+        edges are antiparallel, the count can exceed ``N - 5``.
+
         Example:
             >>> from kaleidocycle import Kaleidocycle
-            >>> kc = Kaleidocycle(n=8, oriented=True)
-            >>> info = kc.local_dof()
-            >>> info['dof']  # one-parameter family of motions
-            1
+            >>> kc = Kaleidocycle(n=9, oriented=False)
+            >>> kc.local_dof()['dof']  # N - 5 with variable torsion
+            4
         """
         from .optimality import local_dof
 
         if config is None:
-            config = self.config
+            config = self.analysis_config
 
         return local_dof(
             self.hinges,
@@ -835,8 +861,8 @@ class Kaleidocycle:
         self,
         config: "ConstraintConfig | None" = None,
         *,
-        step_size: float = 1e-3,
-        n_steps: int = 20,
+        step_size: float = 1e-4,
+        n_steps: int = 10,
         n_samples: int | None = None,
         correction_tol: float = 1e-8,
         max_newton_iter: int = 50,
@@ -858,7 +884,7 @@ class Kaleidocycle:
         all keyword arguments.
 
         Args:
-            config: Constraint configuration. If None, uses ``self.config``.
+            config: Constraint configuration. If None, uses ``self.analysis_config``.
             step_size: Predictor step size.
             n_steps: Number of predictor-corrector steps per sample.
             n_samples: Number of tangent directions to try (defaults to
@@ -887,7 +913,7 @@ class Kaleidocycle:
         from .optimality import finite_motion_dof
 
         if config is None:
-            config = self.config
+            config = self.analysis_config
 
         return finite_motion_dof(
             self.hinges,
@@ -932,7 +958,7 @@ class Kaleidocycle:
         from .optimality import find_nearby_stationary
 
         if config is None:
-            config = self.config
+            config = self.analysis_config
 
         info = find_nearby_stationary(
             self.hinges,
@@ -979,7 +1005,7 @@ class Kaleidocycle:
         from .optimality import follow_motion
 
         if config is None:
-            config = self.config
+            config = self.analysis_config
 
         return follow_motion(
             self.hinges,
