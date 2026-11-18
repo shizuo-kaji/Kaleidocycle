@@ -2,6 +2,25 @@
 
 from __future__ import annotations
 
+from .cad import (  # noqa: F401
+    TwistedPlateConfig,
+    build_hinge_pin,
+    build_kaleidocycle_assembly,
+    build_print_plate,
+    build_twisted_plate,
+    build_twisted_plate_parts,
+    export_print_plate,
+    export_twisted_plate,
+    twisted_plate_from_kaleidocycle,
+)
+from .cad_check import (  # noqa: F401
+    ClearanceError,
+    ClearanceReport,
+    ClearanceWarning,
+    check_hinge_fit,
+    check_kaleidocycle_clearance,
+    trace_kaleidocycle_motion,
+)
 from .constraints import (
     ConstraintConfig,
     constant_torsion_residuals,
@@ -187,6 +206,21 @@ from .transform import (  # noqa: F401
 
 __all__ = [
     "__version__",
+    "TwistedPlateConfig",
+    "build_hinge_pin",
+    "ClearanceError",
+    "ClearanceReport",
+    "ClearanceWarning",
+    "check_hinge_fit",
+    "check_kaleidocycle_clearance",
+    "trace_kaleidocycle_motion",
+    "build_kaleidocycle_assembly",
+    "build_print_plate",
+    "build_twisted_plate",
+    "build_twisted_plate_parts",
+    "export_print_plate",
+    "export_twisted_plate",
+    "twisted_plate_from_kaleidocycle",
     "ConstraintConfig",
     "OptimizationSummary",
     "SolverOptions",

@@ -45,6 +45,8 @@ interaction and make sure the notebook kernel points at the project environment.
 - `BackendComparison.ipynb` compares NumPy and optional JAX solver backends.
 - `LocalDoF.ipynb` analyzes infinitesimal and finite degrees of freedom of the
   constraint-preserving motion at a given configuration.
+- `CADModelGeneration.ipynb` demonstrates parametric 3D-printable twisted-plate
+  CAD export (`.stl`, `.step`, `.3mf`) using optional `build123d`.
 
 ## Interactive web studio
 
@@ -115,6 +117,8 @@ refresh `catalog.json` and the generated fallback used only in direct-file mode.
   tests, and finite-motion tracing wrappers.
 - `src/kaleidocycle/visualization.py`: centreline, hinge, band, tetrahedron,
   paper-model, energy, and vertex-value plotting.
+- `src/kaleidocycle/cad.py`: optional `build123d`-based parametric 3D CAD
+  generator for print-in-place twisted-plate links and assemblies.
 - `src/kaleidocycle/io.py`: JSON and CSV import/export.
 - `src/kaleidocycle/samples.py`: shared named-sample catalogue, promotion, and
   presentable generic-sample selection.
@@ -338,3 +342,94 @@ The integrable API uses the Cayley curvature
 `sign=-1` means anti-periodic/anti-oriented binormals. Every positive mKdV flow
 is available through `flow="mkdvN"` (or `flow=N`) for both signs; the
 sine--Gordon flow is defined only for `sign=-1`.
+
+## 3D Printable CAD Models (Optional)
+
+Parametric 3D CAD export (`.stl`, `.step`, `.3mf`) for twisted-plate links
+uses `build123d` as an optional extra:
+
+```bash
+python -m pip install -e ".[cad]"
+```
+
+If `build123d` is already installed in your conda environment, no extra install
+is needed.
+
+```python
+from kaleidocycle import (
+    Kaleidocycle,
+    check_kaleidocycle_clearance,
+    export_print_plate,
+    export_twisted_plate,
+)
+
+# Export a single link with custom torsion angle, ribbon width, and edge length
+export_twisted_plate(
+    "unit.stl",
+    torsion_angle=72.8,
+    ribbon_width=43.0,
+    edge_length=29.0,
+    degrees=True,
+    with_ring=False,  # set True to include the captive print-in-place ring
+)
+
+# Or derive the torsion angle directly from a Kaleidocycle instance
+kc = Kaleidocycle(7, oriented=False, seed=42)
+# Exporting .3mf from a Kaleidocycle arranges all N units on one print plate
+kc.export_twisted_plate("k7_plate.3mf", ribbon_width=43.0, edge_length=29.0, with_ring=True)
+kc.export_twisted_plate("k7_plate_cone.3mf", hinge_type="cone")  # snap-in hinges
+export_print_plate("k7_plate_no_ring.3mf", kc, ribbon_width=43.0, edge_length=29.0)
+kc.export_twisted_plate("k7_assembly.step", assembly=True)
+
+# Contact check through a full rotation (also run by every export above)
+print(check_kaleidocycle_clearance(kc, ribbon_width=43.0, edge_length=29.0).summary())
+```
+
+`.3mf` output is a plain 3MF (core specification) without slicer project
+settings, so Bambu Studio, OrcaSlicer, and PrusaSlicer open it as geometry and
+keep the printer, filament, and process presets currently selected. Each unit
+is one object (with `plate` and `ring` parts when `with_ring=True`), resting on
+the bed and laid out around `bed_center=(128, 128)` (the centre of a 256 mm
+bed; pass another value for smaller printers). Bambu Studio 02.08.02 shows a
+"3mf file has invalid config, load geometry data only" notice for any 3MF
+without Bambu project settings; this was fixed in 02.08.04, and the geometry
+loads either way.
+
+Two hinge types (`hinge_type`) reproduce NovemberKou's printed designs:
+
+- `"pin"` (default, "Material-saving Design"): adjacent links are joined by
+  octagonal hinge pins (`build_hinge_pin`). Print plates include one pin per
+  unit (object `hinge_pin`, lying flat; pass `with_pins=False` to omit them),
+  and assemblies show the pins in place. The pin is 4 mm corner to corner
+  (`pin_diameter`) with a hollow 1.8 mm core and 0.5 mm end chamfers. The
+  bottom knuckles hold it in 4.0 mm bores, zero clearance at the corners
+  (`pin_fit_clearance=0.0`), so the pin presses in and does not wobble. The
+  top knuckles of the neighbouring link turn on it in 4.4 mm bores
+  (`pin_clearance=0.2`). Knuckles are 7 mm in diameter with 0.2 mm axial gaps
+  (`hinge_gap`), and the bores have a flat teardrop top so that they print
+  without support. If your printer makes holes tight, raise
+  `pin_fit_clearance` slightly (for example to 0.05); if the hinge binds,
+  raise `pin_clearance`.
+- `"cone"` ("Twisted Plate with Ring"): no separate parts. The two outer
+  bottom knuckles carry 60-degree cones with a 4 mm base (`cone_diameter`,
+  `cone_angle`) that snap into matching sockets in the outer ends of the
+  neighbour's top knuckles, with 0.2 mm axial play (0.17 mm normal to the
+  cone). Knuckles are 6 mm in diameter; each socketed knuckle keeps a 2.25 mm
+  gap (`snap_gap`) on its inner side so that it can flex past the cone tip
+  (about 0.95 mm) during assembly.
+
+The default ribbon is 43 mm wide: for the `Kaleidocycle(7, oriented=False)`
+above with 29 mm edges, links two apart graze each other near the centre of
+the ring at 44-45 mm, while 43 mm keeps them at least 0.9 mm apart through
+the whole rotation.
+
+Every export checks the parts for contacts first (`kaleidocycle.cad_check`).
+`check_hinge_fit` joins a link to a copy of itself and requires the knuckles,
+pins, cones and sockets to stay apart, except the intended press fit of a pin.
+For a kaleidocycle, `check_kaleidocycle_clearance` also traces one full
+rotation with the integrable mKdV / sine-Gordon flow and measures every pair
+of links: links that do not share a hinge must stay `min_clearance` (0.4 mm)
+apart, and adjacent links must not touch away from their hinge. Contacts raise
+a `ClearanceWarning` (or `ClearanceError` with `check_clearance="error"`);
+`check_clearance=False` skips the check. The captive ring is checked at its
+printed position.

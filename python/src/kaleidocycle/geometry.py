@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Mapping
+from typing import Any, Iterable, Mapping
 
 import numpy as np
 
@@ -1117,6 +1117,121 @@ class Kaleidocycle:
             linewidth=linewidth,
             title=title,
             show_curve=show_curve,
+        )
+
+    def export_twisted_plate(
+        self,
+        filepath: str | Path,
+        *,
+        segment: int = 0,
+        count: int | None = None,
+        spacing: float = 6.0,
+        ribbon_width: float = 43.0,
+        edge_length: float | None = None,
+        scale: float | None = None,
+        with_ring: bool = False,
+        assembly: bool = False,
+        tolerance: float = 1e-3,
+        angular_tolerance: float = 0.1,
+        check_clearance: bool | str = "warn",
+        min_clearance: float = 0.4,
+        **kwargs: Any,
+    ) -> Path:
+        """Export a 3D-printable twisted plate link, N-unit plate, or assembly.
+
+        When ``assembly=False`` and exporting ``.3mf`` with ``count=None``,
+        automatically arranges all ``self.n`` units on one print plate.
+        Hinge options (``hinge_type="pin"`` or ``"cone"``, clearances, ...) are
+        passed on in ``kwargs``.  Before exporting, the hinge fit and every
+        pair of links through a full rotation of this kaleidocycle are checked
+        for contacts (see :func:`kaleidocycle.cad_check.check_kaleidocycle_clearance`);
+        contacts closer than ``min_clearance`` raise a ``ClearanceWarning``, or a
+        ``ClearanceError`` with ``check_clearance="error"``, and
+        ``check_clearance=False`` skips the check.  Requires the optional
+        ``cad`` extra (``build123d``).
+        """
+        from .cad import (
+            build_kaleidocycle_assembly,
+            export_print_plate,
+            export_shape,
+            twisted_plate_from_kaleidocycle,
+        )
+        from .cad import export_twisted_plate as _export_twisted_plate
+        from .cad_check import (
+            _resolve_policy,
+            check_kaleidocycle_clearance,
+            enforce_report,
+        )
+
+        resolved_edge = 29.0 if edge_length is None else float(edge_length)
+        if _resolve_policy(check_clearance) != "off":
+            report = check_kaleidocycle_clearance(
+                self,
+                ribbon_width=ribbon_width,
+                edge_length=resolved_edge,
+                scale=scale,
+                with_ring=with_ring,
+                min_clearance=min_clearance,
+                **kwargs,
+            )
+            enforce_report(report, check_clearance)
+
+        out_path = Path(filepath)
+        if assembly:
+            shape = build_kaleidocycle_assembly(
+                self,
+                ribbon_width=ribbon_width,
+                edge_length=resolved_edge,
+                scale=scale,
+                with_ring=with_ring,
+                **kwargs,
+            )
+            return export_shape(
+                shape,
+                out_path,
+                tolerance=tolerance,
+                angular_tolerance=angular_tolerance,
+            )
+
+        is_3mf = out_path.suffix.lower() == ".3mf"
+        if count is None:
+            resolved_count = self.n if is_3mf else 1
+        else:
+            resolved_count = int(count)
+        if is_3mf or resolved_count > 1:
+            return export_print_plate(
+                out_path,
+                self,
+                count=resolved_count,
+                spacing=spacing,
+                segment=segment,
+                ribbon_width=ribbon_width,
+                edge_length=edge_length,
+                scale=scale,
+                with_ring=with_ring,
+                tolerance=tolerance,
+                angular_tolerance=angular_tolerance,
+                check_clearance=False,
+                **kwargs,
+            )
+
+        # A single-unit .stl/.step holds the unit only (no hinge pin).
+        kwargs.pop("with_pins", None)
+        cfg = twisted_plate_from_kaleidocycle(
+            self,
+            segment=segment,
+            ribbon_width=ribbon_width,
+            edge_length=edge_length,
+            scale=scale,
+            with_ring=with_ring,
+            **kwargs,
+        )
+        return _export_twisted_plate(
+            out_path,
+            cfg,
+            tolerance=tolerance,
+            angular_tolerance=angular_tolerance,
+            check_clearance=False,
         )
 
     def __repr__(self) -> str:

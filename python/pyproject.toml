@@ -17,6 +17,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+cad = [
+    "build123d>=0.7",
+]
 jax = [
     "jax>=0.4.25",
     "jaxlib>=0.4.25",
@@ -52,5 +55,6 @@ minversion = "7.0"
 addopts = "-ra"
 testpaths = ["tests"]
 markers = [
+    "cad: tests that require build123d (deselect with '-m \"not cad\"')",
     "jax: tests that require JAX (deselect with '-m \"not jax\"')",
 ]
