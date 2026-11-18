@@ -11,6 +11,14 @@
       "non_critical": false
     },
     {
+      "name": "explicit_k15_knotted",
+      "file": "explicit_k15_knotted.json",
+      "n": 15,
+      "oriented": false,
+      "kind": "explicit",
+      "non_critical": false
+    },
+    {
       "name": "generic_k15_noncritical",
       "file": "generic_k15_noncritical.json",
       "n": 15,

@@ -93,6 +93,15 @@ many feasible seeds using separation, spatial extent and three-dimensionality,
 so they read as open rings instead of collapsed tangles. K15 is the default
 because it exposes a five-dimensional span of independent hierarchy motions.
 
+Select **Knotted K15 · explicit theta solution** for the knotted,
+anti-oriented K15 from `ExplicitConstructionWithTheta.ipynb` (`N = 15`,
+`m = 5`, `t = 0`, `cos(mu) ≈ 0.649663`). Its canonical sample is
+`explicit_k15_knotted.json`; the generating theta parameters are recorded in
+`metadata.theta_parameters`. Reconstruct it with
+`generate_theta_binormals(v, z, r, y, N, t=t, gamma=gamma)` and
+`Kaleidocycle(hinges=binormals, oriented=False)`; using the binormals directly
+preserves the frame at the zero-curvature vertices of this initial state.
+
 With a server running from the repository root, the browser loads
 `data/kaleidocycles/catalog.json` and its JSON entries directly. Direct-file
 mode cannot fetch neighbouring JSON under browser security rules, so it uses
