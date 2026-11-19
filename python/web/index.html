@@ -101,6 +101,7 @@
       top: 22px;
       right: 22px;
       display: flex;
+      flex-direction: column;
       gap: 7px;
     }
     .icon-button, .ghost-button, .primary-button, .segmented button {
@@ -340,6 +341,65 @@
       text-overflow: ellipsis;
     }
 
+    .model-description {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+    .chip {
+      padding: 2px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(0, 0, 0, 0.16);
+      font: 500 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: nowrap;
+    }
+    .chip.accent { color: var(--lime); border-color: rgba(201, 242, 140, 0.35); }
+    .chip.warn { color: var(--amber); border-color: rgba(241, 188, 106, 0.35); }
+
+    .segmented.three { grid-template-columns: 1fr 1fr 1fr; }
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .lab-info {
+      min-height: 30px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font: 500 10.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .lab-info.error { color: var(--red); }
+    #analysisCanvas {
+      display: block;
+      width: 100%;
+      height: 196px;
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--panel-solid);
+    }
+
+    #helpOverlay {
+      position: absolute;
+      z-index: 6;
+      top: 22px;
+      right: 70px;
+      width: min(290px, calc(100% - 44px));
+      padding: 14px 16px;
+      border: 1px solid var(--line-strong);
+      border-radius: 14px;
+      background: rgba(16, 23, 19, 0.94);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      font-size: 11px;
+    }
+    #helpOverlay h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; }
+    #helpOverlay dl { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; margin: 0; }
+    #helpOverlay dt { color: var(--lime); font: 600 10.5px ui-monospace, monospace; }
+    #helpOverlay dd { margin: 0; color: var(--muted); }
+    .icon-button.recording { color: #1f1711; background: var(--red); border-color: transparent; }
+    .icon-button.active { color: #17200f; background: var(--lime); border-color: transparent; }
+
     .toast {
       position: fixed;
       z-index: 20;
@@ -359,12 +419,16 @@
     }
     .toast.visible { opacity: 1; transform: translate(-50%, 0); }
 
+    @media (max-width: 1180px) {
+      .gesture-hint { top: auto; bottom: 62px; max-width: calc(100% - 48px); text-align: center; }
+    }
+
     @media (max-width: 840px) {
       body { overflow: auto; }
       .app { height: auto; min-height: 100%; grid-template-columns: 1fr; }
       #viewport { height: 58vh; min-height: 420px; }
       .panel { height: auto; overflow: visible; border: 0; border-top: 1px solid var(--line); }
-      .gesture-hint { top: auto; bottom: 62px; }
+      .gesture-hint { top: 84px; bottom: auto; max-width: calc(100% - 110px); }
       .status-rack { bottom: 18px; }
     }
 
@@ -385,8 +449,26 @@
       </div>
 
       <div class="view-tools" aria-label="View tools">
-        <button class="icon-button" id="resetView" title="Reset the camera" aria-label="Reset the camera">⌂</button>
+        <button class="icon-button" id="resetView" title="Reset the camera (V)" aria-label="Reset the camera">⌂</button>
+        <button class="icon-button" id="autoRotate" title="Turntable rotation (A)" aria-label="Turntable rotation" aria-pressed="false">↻</button>
         <button class="icon-button" id="captureView" title="Save a PNG image" aria-label="Save a PNG image">⇩</button>
+        <button class="icon-button" id="recordView" title="Record a video clip" aria-label="Record a video clip" aria-pressed="false">●</button>
+        <button class="icon-button" id="copyLink" title="Copy a link to this model" aria-label="Copy a link to this model">⧉</button>
+        <button class="icon-button" id="toggleHelp" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts" aria-expanded="false">?</button>
+      </div>
+      <div id="helpOverlay" hidden>
+        <h3>Shortcuts</h3>
+        <dl>
+          <dt>Space</dt><dd>Run or pause the flow</dd>
+          <dt>.</dt><dd>Single flow step</dd>
+          <dt>B</dt><dd>Reverse the flow direction</dd>
+          <dt>[ ]</dt><dd>Lower or raise the hierarchy order</dd>
+          <dt>R</dt><dd>Reset the shape</dd>
+          <dt>M</dt><dd>Mirror dual</dd>
+          <dt>V</dt><dd>Reset the camera</dd>
+          <dt>A</dt><dd>Turntable rotation</dd>
+          <dt>?</dt><dd>Show or hide this list</dd>
+        </dl>
       </div>
 
       <div class="gesture-hint" id="gestureHint">Drag a vertex to sculpt · drag the background to orbit · scroll to zoom</div>
@@ -419,6 +501,44 @@
           <button class="ghost-button" id="exportFile">Export JSON</button>
         </div>
         <input id="fileInput" type="file" accept=".json,application/json" hidden>
+        <p class="model-description" id="modelDescription"></p>
+        <div class="chips" id="modelChips"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h3>Model lab</h3><span>Exact families</span></div>
+        <div class="segmented" role="tablist" aria-label="Family">
+          <button id="labCriticalTab" class="active" role="tab" aria-selected="true">Critical circle</button>
+          <button id="labKnotTab" role="tab" aria-selected="false">Torus knot</button>
+        </div>
+        <div id="labCritical">
+          <label class="control">
+            <span class="label-line"><span>Hinges N</span><strong id="labNValue">9</strong></span>
+            <input id="labN" type="range" min="6" max="60" step="1" value="9">
+          </label>
+          <div class="field-grid control">
+            <label><span class="label-line"><span>Winding m</span></span><select id="labWinding" aria-label="Winding m"></select></label>
+            <label><span class="label-line"><span>Closing index j</span></span><select id="labLevel" aria-label="Closing index j"></select></label>
+          </div>
+          <label class="switch-row control"><span>Mirror dual (μ ↦ π − μ)</span><input id="labMirror" type="checkbox"></label>
+        </div>
+        <div id="labKnot" hidden>
+          <div class="field-grid control">
+            <label><span class="label-line"><span>Cells M (N = 3M)</span></span><select id="labCells" aria-label="Cells M"></select></label>
+            <label><span class="label-line"><span>Turns</span></span><select id="labTurns" aria-label="Turns"></select></label>
+          </div>
+          <label class="switch-row control"><span>Mirror dual</span><input id="labKnotMirror" type="checkbox"></label>
+        </div>
+        <p class="lab-info" id="labInfo"></p>
+        <div class="button-grid control">
+          <button class="primary-button" id="labGenerate">Generate</button>
+          <button class="ghost-button" id="labPrincipal" title="The global torsion minimum for this N">Principal family</button>
+        </div>
+        <label class="control" id="phaseControl">
+          <span class="label-line"><span>Phase on the critical circle</span><strong id="phaseValue">—</strong></span>
+          <input id="phase" type="range" min="0" max="1" step="0.0005" value="0" disabled>
+        </label>
+        <p class="hint">cn families κₙ = A cn(ω + nδ; k) close at the moduli where the closing angle Θ(k) = −2πj. The phase ω moves exactly along the critical circle.</p>
       </section>
 
       <section class="card">
@@ -452,15 +572,50 @@
           <span class="label-line"><span>Torsion angle μ</span><strong id="torsionValue">—</strong></span>
           <input id="torsion" type="range" min="0.2" max="2.94" step="0.002">
         </label>
-        <div class="button-grid control">
+        <div class="button-grid three control">
           <button class="ghost-button" id="resetShape">Reset shape</button>
           <button class="ghost-button" id="setInitial">Use as initial</button>
+          <button class="ghost-button" id="mirrorShape" title="Mirror duality B[n] ↦ (−1)ⁿ B[n] (M)">Mirror</button>
         </div>
-        <p class="hint">Pull a highlighted centre-line vertex to move the shape.</p>
+        <p class="hint">Pull a highlighted centre-line vertex to move the shape. <em>Mirror</em> applies B[n] ↦ (−1)ⁿB[n]: μ ↦ π − μ, σ ↦ (−1)ᴺσ and SL ↦ N/2 − SL.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h3>Analysis</h3><span id="analysisTag">Live</span></div>
+        <div class="segmented three" role="tablist" aria-label="Analysis view">
+          <button id="analysisProfile" class="active" role="tab" aria-selected="true">Curvature</button>
+          <button id="analysisPortrait" role="tab" aria-selected="false">Phase plane</button>
+          <button id="analysisClosing" role="tab" aria-selected="false">Closing Θ(k)</button>
+        </div>
+        <canvas id="analysisCanvas" aria-label="Analysis plot"></canvas>
+        <p class="hint" id="analysisHint"></p>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h3>Diagnostics</h3><span>Live</span></div>
+        <div class="metrics">
+          <div class="metric"><span>Closure error</span><strong id="metricClosure">—</strong></div>
+          <div class="metric"><span>Monodromy error</span><strong id="metricMonodromy">—</strong></div>
+          <div class="metric"><span>Hamiltonian E₁</span><strong id="metricE1">—</strong></div>
+          <div class="metric"><span>Hamiltonian E₂</span><strong id="metricE2">—</strong></div>
+          <div class="metric" title="Gauss writhe; undefined at self-contact"><span class="math-label">Wr</span><strong id="metricWr">—</strong></div>
+          <div class="metric" title="Normalised self-linking SL = Wr + Nμ/(2π); 2·SL is the number of half-twists. Half-integer for anti-oriented cycles; undefined at self-contact"><span class="math-label">SL = Wr + Nμ/2π</span><strong id="metricLk">—</strong></div>
+          <div class="metric" title="Torsion angle as a multiple of π"><span class="math-label">μ / π</span><strong id="metricTorsion">—</strong></div>
+          <div class="metric" title="Relative residual of the stationary recurrence D(κₙ₋₁ + κₙ₊₁) = λκₙ with λ = 2cos μ + E₂/N; zero exactly at torsion-critical configurations"><span>Criticality</span><strong id="metricCritical">—</strong></div>
+        </div>
       </section>
 
       <section class="card">
         <div class="card-title"><h3>Appearance</h3><span>Display</span></div>
+        <label class="control">
+          <span class="label-line"><span>Colouring</span></span>
+          <select id="colourMode" aria-label="Colouring">
+            <option value="gradient">Gradient along the ring</option>
+            <option value="curvature">Curvature κₙ (diverging)</option>
+            <option value="alternating">Alternating links</option>
+            <option value="mono">Single colour</option>
+          </select>
+        </label>
         <label class="control">
           <span class="label-line"><span>Ribbon width</span><strong id="widthValue">0.70</strong></span>
           <input id="ribbonWidth" type="range" min="0.2" max="1.15" step="0.01" value="0.7">
@@ -472,18 +627,7 @@
         <label class="switch-row control"><span>Show centre-line</span><input id="showCentreline" type="checkbox" checked></label>
         <label class="switch-row"><span>Show hinge axes</span><input id="showHinges" type="checkbox" checked></label>
         <label class="switch-row"><span>Show editing handles</span><input id="showHandles" type="checkbox" checked></label>
-      </section>
-
-      <section class="card">
-        <div class="card-title"><h3>Diagnostics</h3><span>Live</span></div>
-        <div class="metrics">
-          <div class="metric"><span>Closure error</span><strong id="metricClosure">—</strong></div>
-          <div class="metric"><span>Monodromy error</span><strong id="metricMonodromy">—</strong></div>
-          <div class="metric"><span>Hamiltonian E₁</span><strong id="metricE1">—</strong></div>
-          <div class="metric"><span>Hamiltonian E₂</span><strong id="metricE2">—</strong></div>
-          <div class="metric" title="Gauss writhe; undefined at self-contact"><span class="math-label">Wr</span><strong id="metricWr">—</strong></div>
-          <div class="metric" title="Lk = Wr + Nμ/(2π); half-integer for anti-oriented cycles; undefined at self-contact"><span class="math-label">Lk</span><strong id="metricLk">—</strong></div>
-        </div>
+        <label class="switch-row" title="Display each frame by the rotation closest to the previous one, so a motion is shown without its rigid drift"><span>Remove rigid drift</span><input id="stabilise" type="checkbox" checked></label>
       </section>
 
     </aside>
@@ -493,6 +637,7 @@
   <script src="vendor/three.min.js"></script>
   <script src="sample-fallback.js"></script>
   <script src="sim.js"></script>
+  <script src="families.js"></script>
   <script src="viewer.js"></script>
 </body>
 </html>

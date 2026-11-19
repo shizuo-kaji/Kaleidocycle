@@ -448,6 +448,106 @@
     );
   }
 
+  /**
+   * Distance from the torsion-critical locus. Critical configurations solve
+   * D[n] (kappa[n-1] + kappa[n+1]) = lambda kappa[n] with
+   * lambda = 2 cos(mu) + E2 / N (the stationary recurrence). The residual is
+   * relative to |kappa|; `qrt` holds the biquadratic invariant
+   * J[n] = D[n-1] D[n] - (lambda / 4) kappa[n-1] kappa[n], constant along a
+   * critical sequence.
+   */
+  function recurrenceDiagnostics(curvatures, torsionAngle, sign) {
+    const n = curvatures.length;
+    const weights = curvatureWeights(curvatures);
+    const previous = twistedShift(curvatures, -1, sign);
+    const next = twistedShift(curvatures, 1, sign);
+    const multiplier =
+      2 * Math.cos(torsionAngle) + secondHamiltonian(curvatures, sign) / n;
+    const scale = vectorNorm(curvatures);
+    const residual = weights.map(
+      (weight, index) =>
+        weight * (previous[index] + next[index]) - multiplier * curvatures[index],
+    );
+    const previousWeights = twistedShift(weights, -1, 1);
+    const qrt = weights.map(
+      (weight, index) =>
+        previousWeights[index] * weight -
+        0.25 * multiplier * previous[index] * curvatures[index],
+    );
+    return {
+      multiplier,
+      residual: scale < 1e-12 ? NaN : vectorNorm(residual) / scale,
+      qrt,
+    };
+  }
+
+  /**
+   * Rotation (row-major 3 × 3) minimising sum |R p[i] − q[i]|² for centred
+   * point sets, by Horn's quaternion method.
+   */
+  function bestRotation(points, reference) {
+    const s = new Array(9).fill(0);
+    points.forEach((p, index) => {
+      const q = reference[index];
+      for (let row = 0; row < 3; row += 1) {
+        for (let col = 0; col < 3; col += 1) s[3 * row + col] += p[row] * q[col];
+      }
+    });
+    const [sxx, sxy, sxz, syx, syy, syz, szx, szy, szz] = s;
+    const matrix = [
+      [sxx + syy + szz, syz - szy, szx - sxz, sxy - syx],
+      [syz - szy, sxx - syy - szz, sxy + syx, szx + sxz],
+      [szx - sxz, sxy + syx, -sxx + syy - szz, syz + szy],
+      [sxy - syx, szx + sxz, syz + szy, -sxx - syy + szz],
+    ];
+    const vectors = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
+    for (let sweep = 0; sweep < 40; sweep += 1) {
+      let off = 0;
+      for (let p = 0; p < 4; p += 1) {
+        for (let q = p + 1; q < 4; q += 1) off += matrix[p][q] ** 2;
+      }
+      if (off < 1e-22) break;
+      for (let p = 0; p < 4; p += 1) {
+        for (let q = p + 1; q < 4; q += 1) {
+          if (Math.abs(matrix[p][q]) < 1e-300) continue;
+          const theta = (matrix[q][q] - matrix[p][p]) / (2 * matrix[p][q]);
+          const t = Math.sign(theta || 1) /
+            (Math.abs(theta) + Math.sqrt(theta * theta + 1));
+          const c = 1 / Math.sqrt(t * t + 1);
+          const sn = t * c;
+          for (let k = 0; k < 4; k += 1) {
+            const kp = matrix[k][p];
+            const kq = matrix[k][q];
+            matrix[k][p] = c * kp - sn * kq;
+            matrix[k][q] = sn * kp + c * kq;
+          }
+          for (let k = 0; k < 4; k += 1) {
+            const pk = matrix[p][k];
+            const qk = matrix[q][k];
+            matrix[p][k] = c * pk - sn * qk;
+            matrix[q][k] = sn * pk + c * qk;
+          }
+          for (let k = 0; k < 4; k += 1) {
+            const vp = vectors[k][p];
+            const vq = vectors[k][q];
+            vectors[k][p] = c * vp - sn * vq;
+            vectors[k][q] = sn * vp + c * vq;
+          }
+        }
+      }
+    }
+    let best = 0;
+    for (let index = 1; index < 4; index += 1) {
+      if (matrix[index][index] > matrix[best][best]) best = index;
+    }
+    const [w, x, y, z] = vectors.map((row) => row[best]);
+    return [
+      w * w + x * x - y * y - z * z, 2 * (x * y - w * z), 2 * (x * z + w * y),
+      2 * (x * y + w * z), w * w - x * x + y * y - z * z, 2 * (y * z - w * x),
+      2 * (x * z - w * y), 2 * (y * z + w * x), w * w - x * x - y * y + z * z,
+    ];
+  }
+
   const frameFromColumns = (tangent, normal, binormal) => [
     tangent[0], normal[0], binormal[0],
     tangent[1], normal[1], binormal[1],
@@ -561,6 +661,22 @@
       this.initialFrame = state.initialFrame.slice();
       this.flowTime = 0;
       this.update();
+    }
+
+    /** Replace the state by closed hinges with the same N and monodromy. */
+    setHinges(hinges) {
+      const parsed = inferCycle({ n: this.n, hinges });
+      if (parsed.sign !== this.sign) {
+        throw new Error("The new hinges have a different monodromy.");
+      }
+      this.curvatures = parsed.curvatures;
+      this.torsionAngle = parsed.torsionAngle;
+      this.initialFrame = parsed.initialFrame;
+      this.update();
+    }
+
+    hinges() {
+      return this.configuration.frames.map((frame) => matrixColumn(frame, 2));
     }
 
     update() {
@@ -796,6 +912,11 @@
       );
       const writhe = gaussWrithe(this.configuration.vertices);
       const twist = this.n * this.torsionAngle / (2 * Math.PI);
+      const recurrence = recurrenceDiagnostics(
+        this.curvatures,
+        this.torsionAngle,
+        this.sign,
+      );
       return {
         closure,
         monodromy,
@@ -803,12 +924,14 @@
         linking: writhe + twist,
         hamiltonian1: firstHamiltonian(this.curvatures),
         hamiltonian2: secondHamiltonian(this.curvatures, this.sign),
+        criticality: recurrence.residual,
+        multiplier: recurrence.multiplier,
       };
     }
 
     toJSON() {
       const vertices = centredVertices(this.configuration);
-      const hinges = this.configuration.frames.map((frame) => matrixColumn(frame, 2));
+      const hinges = this.hinges();
       const tangents = this.configuration.frames
         .slice(0, this.n)
         .map((frame) => matrixColumn(frame, 0));
@@ -833,11 +956,15 @@
 
   global.Kaleidocycle = Object.freeze({
     Model,
+    bestRotation,
     curvatureAngles,
+    firstHamiltonian,
     gaussWrithe,
     hierarchyField,
     inferCycle,
     reconstruct,
+    recurrenceDiagnostics,
+    secondHamiltonian,
     sineGordonField,
     twistedShift,
   });

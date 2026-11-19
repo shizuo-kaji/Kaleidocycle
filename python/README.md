@@ -61,7 +61,10 @@ and interactive diagnostics in `notebooks/SelfCrossing.ipynb`. Rebuild the
 shared sample and offline fallback with `python scripts/build_self_crossing.py`.
 
 `web/` contains a three.js studio for the integrable hierarchy and constrained
-editing of closed constant-torsion kaleidocycles. When it is served over HTTP,
+editing of closed constant-torsion kaleidocycles. Its Model lab builds exact
+elliptic critical circles, right-angle circles and torus-knot rings in the
+browser, and its Analysis card plots the curvature profile, the QRT phase plane
+and the closing angle `Theta(k)`. When it is served over HTTP,
 the built-in menu reads the same canonical JSON files in
 `data/kaleidocycles/` that notebooks load through `load_sample()`.
 

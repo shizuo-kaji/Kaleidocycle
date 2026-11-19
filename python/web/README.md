@@ -47,10 +47,78 @@ Time integration uses RK4. The time step is automatically reduced when a high
 hierarchy field is large, and a small periodic constraint correction controls
 floating-point drift. The displayed `t` is the actual integrated flow time.
 
-The Diagnostics panel updates **Wr** (standard Gauss writhe) and
-**Lk = Wr + Nμ/(2π)** with each flow step or edit. Anti-oriented cycles can have
-half-integer Lk. Both values display `—` at a detected self-contact or when the
-closure error exceeds `1e-6`; the normalisation matches `SelfCrossing.ipynb`.
+The Diagnostics panel updates **Wr** (standard Gauss writhe) and the
+normalised self-linking **SL = Wr + Nμ/(2π)** with each flow step or edit;
+`2·SL` is the number of half-twists of the hinge ribbon. Anti-oriented cycles
+have half-integer SL. Both values display `—` at a detected self-contact or
+when the closure error exceeds `1e-6`; the normalisation matches
+`SelfCrossing.ipynb` and the paper. (Earlier versions labelled the same
+quantity “Lk”.)
+
+**Criticality** is the relative residual of the stationary recurrence
+
+```text
+D[n] (kappa[n-1] + kappa[n+1]) = lambda kappa[n],   lambda = 2 cos(mu) + E2 / N,
+```
+
+with `D[n] = 1 + kappa[n]^2 / 4`. It vanishes exactly at torsion-critical
+configurations and is of order one for generic rings.
+
+## Model lab: exact families
+
+The Model lab builds exact configurations in the browser (`families.js`), with
+no optimisation:
+
+- **Critical circle.** The Jacobi elliptic family
+  `kappa[n] = A cn(omega + n delta; k)` with `delta = 2 K(k) m / N`. For
+  `3 ≤ m < N/2` the studio computes the closing angle `Theta(k)` of the frame
+  monodromy, which decreases from 0 to `−m pi`, and solves `Theta(k) = −2 pi j`
+  for each closing index `j = 1, …, ⌊(m − 1)/2⌋`. For `m = N/2` it uses the
+  right-angle circles `k = sin(2 pi j / N)`, `1 ≤ j < N/4`. The information line
+  shows `k`, `mu`, `sigma = (−1)^m` and the torsion Hessian inertia
+  `(N − m − 3, m − 3, 1)`: `m = 3` is the minimum (**Principal family**),
+  `m = N − 3` the maximum, and everything in between is a saddle. **Mirror dual**
+  gives `mu* = pi − mu` and winding `N − m`.
+- **Torus knot.** The explicit oriented ring with `N = 3M` hinges and
+  `M`-fold symmetry. Its centre line is the `(turns, M)` torus knot and its
+  self-linking `M · turns` grows quadratically with `N`.
+
+The **Phase on the critical circle** slider moves `omega` over one period `4K`.
+This traverses the critical circle exactly, which the first mKdV flow `X(1)`
+also does, up to time reparametrisation. The JavaScript elliptic functions use
+the AGM and the descending Landen transformation. Its closing moduli agree with
+`src/kaleidocycle/elliptic.py` to about `1e-15`.
+
+The sample menu, the closing index and the mirror setting are recorded in the
+URL hash (`#sample=…`, `#critical=N,m,j&phase=…`, `#knot=M,turns`, optionally
+`&mirror=1`), so **Copy link** (⧉) reproduces the current model.
+
+## Analysis plots
+
+- **Curvature**: the current `kappa[n]` as bars, with the initial state as
+  ticks. Hierarchy flows move these values as travelling waves.
+- **Phase plane**: the pairs `(kappa[n], kappa[n+1])` together with the QRT
+  biquadric `(1 + x²/4)(1 + y²/4) − (lambda/4) x y = J`. At a critical
+  configuration every pair lies on the curve; generic rings scatter off it.
+- **Closing Θ(k)**: the closing-angle curve for the Model lab's `N` and `m`,
+  with its crossings of `−2 pi j` and the current model highlighted.
+
+## Mirror duality and display tools
+
+**Mirror** (key `M`) applies `B[n] ↦ (−1)^n B[n]`: `mu ↦ pi − mu`,
+`sigma ↦ (−1)^N sigma` and `SL ↦ N/2 − SL`. The torsion Hessian inertia swaps its
+first two entries.
+
+The Appearance card can colour links along the ring, by curvature (a diverging
+map of `kappa[n]` at each hinge), alternately, or in one colour. **Remove rigid
+drift** shows each frame by the rotation that best matches the previous one
+(Horn's quaternion method), so a motion is seen without its overall
+spin. This only affects the display; exported JSON is unchanged.
+
+The view tools reset the camera (`V`), toggle turntable rotation (`A`), save a
+PNG, record a WebM/MP4 clip of the canvas, copy a link, and list the keyboard
+shortcuts (`?`). `Space` runs or pauses the flow, `.` takes a single step, `B`
+reverses it, `[`/`]` change the hierarchy order, and `R` resets the shape.
 
 ## Interactive initial geometry
 
@@ -86,16 +154,39 @@ After editing, **Use as initial** makes the current shape the reset state.
 ## Built-in data
 
 The repository-level `data/kaleidocycles/` directory is the single source of
-truth. It contains the K7–K9 reference configurations and three generic samples,
-including the non-critical, anti-oriented K15 used in
+truth. It contains exact torsion-critical and knotted models (below), the
+K7–K9 Möbius configurations, a counterexample, an explicit theta solution and
+three generic samples, including the non-critical, anti-oriented K15 used in
 `IntegrableDeformations.ipynb`. The generic configurations were selected from
 many feasible seeds using separation, spatial extent and three-dimensionality,
 so they read as open rings instead of collapsed tangles. K15 is the default
 because it exposes a five-dimensional span of independent hierarchy motions.
 
+The menu groups the built-ins by kind. The featured exact models, regenerated by
+`python scripts/build_featured_samples.py`, are:
+
+| Sample | What it shows |
+| --- | --- |
+| Classical K6 · right-angle circle | The hexagonal toy: `N = 6`, `mu = pi/2`, the right-angle circle `m = 3`, `j = 1`; half-width `1/√2` gives regular tetrahedra |
+| Principal K7 · minimum torsion | The global torsion minimum `mu_7 = 0.40455 pi`, inertia `(1, 0, 1)` |
+| Principal K48 · continuum limit | `k ≈ k_inf`, `N mu ≈ C_inf` |
+| Elliptic K11 · oriented saddle (m = 4) | Inertia `(4, 1, 1)` |
+| Elliptic K11 · (2,5) torus knot | `m = 5`, `j = 2`, `SL = 15/2` |
+| Elliptic K17 · (3,7) torus knot | `m = 7`, `j = 3`, `SL = 35/2` |
+| Right-angle K8 · oriented energy minimum | `E1 = 4 log 2`, two-dimensional fixed-torsion fibre |
+| Right-angle K10 · energy-minimising circle | Energy inertia `(4, 0, 1)`, four-dimensional motion fibre |
+| Torus-knot K15 · SL = 10 | Explicit oriented `(2,5)` torus knot; its mirror has `SL = −5/2` |
+
+The knot types of the `j ≥ 2` elliptic branches are numerical identifications
+(Alexander polynomials of a generic projection), not theorems. The optimised
+Möbius K7–K9 samples are the mirrors of the principal family. Their torsion
+`pi − mu_N` is the maximum for their monodromy, and their descriptions now say
+so.
+
 Select **Knotted K15 · explicit theta solution** for the knotted,
 anti-oriented K15 from `ExplicitConstructionWithTheta.ipynb` (`N = 15`,
-`m = 5`, `t = 0`, `cos(mu) ≈ 0.649663`). Its canonical sample is
+`m = 5`, `t = 0`, `cos(mu) ≈ 0.649663`). It is the `j = 2` closing branch of
+the `m = 5` cn family, and numerically a `(2,5)` torus knot. Its canonical sample is
 `explicit_k15_knotted.json`; the generating theta parameters are recorded in
 `metadata.theta_parameters`. Reconstruct it with
 `generate_theta_binormals(v, z, r, y, N, t=t, gamma=gamma)` and
@@ -127,8 +218,14 @@ python scripts/build_web_samples.py
 
 - `index.html` — British-English interface and responsive styling.
 - `viewer.js` — three.js rendering, camera gestures, picking and UI wiring.
-- `sim.js` — server-independent curvature model, constraints and flows; it can
-  also be loaded by Node for mathematical tests.
+- `sim.js` — server-independent curvature model, constraints, flows,
+  criticality diagnostics and display alignment; it can also be loaded by Node
+  for mathematical tests.
+- `families.js` — Jacobi elliptic functions, closing moduli, critical circles,
+  right-angle circles, torus-knot rings and mirror duality.
+- `test_sim.js` — Node checks of both scripts against the Python package
+  (`node test_sim.js`).
+- `../scripts/build_featured_samples.py` — exact featured samples.
 - `sample-fallback.js` — generated direct-file fallback; do not edit by hand.
 - `../scripts/build_web_samples.py` — catalogue/fallback generator.
 - `../data/kaleidocycles/` — canonical named JSON configurations and catalogue.
