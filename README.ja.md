@@ -10,8 +10,9 @@
 ここでは，メビウス・カライドサイクルの設計や動きを計算するためのコンピュータ・コードや，
 折り紙で作成するための展開図，3Dプリンタで出力するためのモデルファイルを公開しています．
 
+**[インタラクティブ・デモ！](https://shizuo-kaji.github.io/Kaleidocycle/)**
+
 ## 目次
-- [インタラクティブ・デモ](#インタラクティブデモ)
 - [リポジトリ構成](#リポジトリ構成)
   - [ドキュメント](#ドキュメント)
   - [Python](#python)
@@ -42,7 +43,6 @@ mKdV 階層と半離散 sine–Gordon flow による変形をアニメーショ�
   インストール，ノートブック，厳密解の構成，可積分変形，剛性解析，CAD 出力
 - [Kaleidocycle Studio](python/web/README.md)（英語） — ブラウザ版スタジオ：可積分フロー，拘束付き編集，Model lab，解析グラフ
 - [Python API リファレンス](python/api.md)（英語） — 可積分変形の API と，旧コードのルーチン一覧
-- [自己交差の証明データ](python/data/counterexamples/README.md)（英語） — 精度保証付きの K12 自己交差のデータ
 - [3Dプリンタ用のモデル](3d_model/README.ja.md)，[折り紙の展開図と折り方](paper_model/README.ja.md)，[ヘクサフレクサゴン](hexagon/README.ja.md)
 
 ## Python

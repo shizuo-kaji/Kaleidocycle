@@ -9,8 +9,9 @@ repository gathers the assets needed to model, simulate, and fabricate these
 mechanisms: Python tooling, Maple/Mathematica notebooks,
 paper templates, and 3D-printable parts.
 
+**[Interactive demo!](https://shizuo-kaji.github.io/Kaleidocycle/)**
+
 ## Contents
-- [Interactive demo](#interactive-demo)
 - [Repository Tour](#repository-tour)
 - [Documentation](#documentation)
 - [Quick Start](#quick-start)
@@ -47,8 +48,6 @@ and supports interactive editing of vertex positions and torsion-angles.
   flows, constrained editing, Model lab and analysis plots
 - [Python API reference](python/api.md) — the integrable-deformation API and
   the inventory of legacy routines
-- [Self-crossing certificate](python/data/counterexamples/README.md) — data for
-  the certified K12 self-crossing
 - [3D-printable models](3d_model/README.md), [paper models](paper_model/README.md)
   and the [hexaflexagon](hexagon/README.md)
 
