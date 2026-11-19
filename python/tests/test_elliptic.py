@@ -201,6 +201,74 @@ def test_finite_motion_dof_matches_index_theorem() -> None:
 
 
 @pytest.mark.parametrize(
+    ("n", "level", "energy"),
+    [(6, 1, 3.0 * np.log(4.0)), (8, 1, 4.0 * np.log(2.0)), (10, 2, None)],
+)
+def test_right_angle_family_is_a_closed_critical_circle(n, level, energy) -> None:
+    from kaleidocycle.elliptic import right_angle_family
+
+    family = right_angle_family(n, level)
+    assert family.sign == (-1) ** (n // 2)
+    assert family.torsion_angle == pytest.approx(np.pi / 2, abs=1e-12)
+    kappa = family.curvatures(0.4)
+    np.testing.assert_allclose(np.roll(kappa, -2)[: n - 2], -kappa[: n - 2], atol=1e-12)
+    h = (1 + kappa[0] ** 2 / 4) * (1 + kappa[1] ** 2 / 4)
+    assert h == pytest.approx(1 / np.cos(2 * np.pi * level / n) ** 2, rel=1e-12)
+    configuration = family.configuration(0.4)
+    assert np.linalg.norm(configuration.closure_residual) < 1e-12
+    assert np.linalg.norm(configuration.monodromy_residual) < 1e-12
+    if energy is not None:
+        assert first_hamiltonian(kappa) == pytest.approx(energy, abs=1e-12)
+    with pytest.raises(ValueError):
+        right_angle_family(9)
+    with pytest.raises(ValueError):
+        right_angle_family(8, 2)
+
+
+def test_torus_knot_ring_has_quadratic_self_linking() -> None:
+    from kaleidocycle.elliptic import torus_knot_binormals
+    from kaleidocycle.integrable import framed_polygon_from_binormals
+
+    binormals = torus_knot_binormals(5, 2)
+    assert binormals.shape == (16, 3)
+    dots = np.einsum("ij,ij->i", binormals[:-1], binormals[1:])
+    h = np.cos((np.pi - 4 * np.pi / 5) / 3)
+    np.testing.assert_allclose(dots, -h / (1 + 3 * h), atol=1e-14)
+    np.testing.assert_allclose(binormals[-1], binormals[0], atol=1e-14)
+    polygon = framed_polygon_from_binormals(binormals)
+    assert np.linalg.norm(polygon.vertices[-1] - polygon.vertices[0]) < 1e-12
+    assert np.all(polygon.curvatures > 0.0)
+    # compute_linking_number is 2 SL: SL = cells * turns = 10.
+    assert compute_linking_number(binormals) == pytest.approx(20.0, abs=1e-8)
+    mirrored = torus_knot_binormals(5, 2, mirror=True)
+    np.testing.assert_allclose(mirrored[-1], -mirrored[0], atol=1e-14)
+    assert compute_linking_number(mirrored) == pytest.approx(-5.0, abs=1e-8)
+    with pytest.raises(ValueError):
+        torus_knot_binormals(6, 2)
+
+
+def test_featured_critical_samples_solve_the_stationary_recurrence() -> None:
+    from kaleidocycle import load_sample, sample_catalogue
+    from kaleidocycle.integrable import framed_polygon_from_binormals
+
+    critical = [
+        entry["name"]
+        for entry in sample_catalogue()["samples"]
+        if entry["kind"] == "critical"
+    ]
+    assert {"classic_k6_right_angle", "principal_k7_minimum"} <= set(critical)
+    for name in critical:
+        cycle = load_sample(name)
+        hinges = cycle.hinges
+        sign = 1 if np.allclose(hinges[-1], hinges[0]) else -1
+        kappa = framed_polygon_from_binormals(hinges).curvatures
+        cosine = float(np.mean(np.einsum("ij,ij->i", hinges[:-1], hinges[1:])))
+        multiplier = critical_multiplier(kappa, cosine, sign=sign)
+        residual = variational_recurrence_residual(kappa, multiplier, sign=sign)
+        assert np.max(np.abs(residual)) < 1e-9, name
+
+
+@pytest.mark.parametrize(
     ("n", "m", "guess"),
     [(7, 3, (0.48, 0.27)), (9, 3, (0.34, 0.29)), (15, 5, (0.40, 0.69))],
 )

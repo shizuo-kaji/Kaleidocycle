@@ -46,8 +46,10 @@ from .elliptic import (  # noqa: F401
     project_to_design_space,
     principal_family,
     quadratic_inertia,
+    right_angle_family,
     torsion_hessian,
     torsion_limit_modulus,
+    torus_knot_binormals,
 )
 from .energies import (  # noqa: F401
     bending_energy,
@@ -254,8 +256,10 @@ __all__ = [
     "project_to_design_space",
     "principal_family",
     "quadratic_inertia",
+    "right_angle_family",
     "torsion_hessian",
     "torsion_limit_modulus",
+    "torus_knot_binormals",
     "build_kaleidocycle_assembly",
     "build_print_plate",
     "build_twisted_plate",

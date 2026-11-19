@@ -132,7 +132,9 @@
         2.1510571102112408e-16
       ]
     ],
-    "kind": "mobius"
+    "kind": "mobius",
+    "label": "M\u00f6bius K7 \u00b7 maximal torsion (oriented)",
+    "description": "The optimised seven-hinge M\u00f6bius Kaleidocycle. It is the mirror of the principal family (B[n] \u21a6 (\u22121)\u207fB[n]), so its torsion \u03c0 \u2212 \u03bc_7 = 0.59545\u03c0 is the maximum for its monodromy and its Hessian inertia is (0, 1, 1)."
   },
   "cos_mean": -0.2953885637622172,
   "cos_std": 5.93439168722175e-17,

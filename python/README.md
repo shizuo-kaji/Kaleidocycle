@@ -379,6 +379,20 @@ for k in closing_moduli(13, 5):
 print(continuum_constants())          # (k_inf, C_inf) = (0.63092..., 8.09349...)
 ```
 
+Two further exact constructions from the paper are available.
+`right_angle_family(N, j)` is the right-angle critical circle (`c = 0`,
+`kappa[n+2] = -kappa[n]`, `m = N/2`, `k = sin(2 pi j / N)`); `N = 6, j = 1` is
+the classical hexagonal Kaleidocycle. `torus_knot_binormals(cells, turns)` is the
+explicit oriented ring with `N = 3 * cells` hinges whose centre line is the
+`(turns, cells)` torus knot and whose self-linking `cells * turns` grows
+quadratically in `N`; `mirror=True` applies the mirror duality.
+
+`python scripts/build_featured_samples.py` regenerates the featured built-in
+samples from these functions (classical K6, principal K7 and K48, elliptic
+saddles and torus knots, right-angle energy minima and the K15 with
+`SL = 10`). It validates closure, constant torsion and self-linking before
+exporting them.
+
 `Kaleidocycle.local_dof()` and the other tangent-space methods use
 `Kaleidocycle.analysis_config`, which constrains the terminal hinge by the full
 3-vector alignment. At a regular closed configuration the default count is the

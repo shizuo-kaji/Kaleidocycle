@@ -147,7 +147,9 @@
         -1.6653345369377348e-16
       ]
     ],
-    "kind": "mobius"
+    "kind": "mobius",
+    "label": "M\u00f6bius K8 \u00b7 maximal torsion (anti-oriented)",
+    "description": "The optimised eight-hinge M\u00f6bius Kaleidocycle. It is the mirror of the principal family (B[n] \u21a6 (\u22121)\u207fB[n]), so its torsion \u03c0 \u2212 \u03bc_8 = 0.65573\u03c0 is the maximum for its monodromy and its Hessian inertia is (0, 2, 1)."
   },
   "cos_mean": -0.4699589259399295,
   "cos_std": 7.343435057440258e-17,

@@ -58,8 +58,10 @@ __all__ = [
     "project_to_design_space",
     "principal_family",
     "quadratic_inertia",
+    "right_angle_family",
     "torsion_hessian",
     "torsion_limit_modulus",
+    "torus_knot_binormals",
 ]
 
 
@@ -371,6 +373,71 @@ def minimum_torsion_angle(n_hinges: int) -> float:
     """Global minimum ``mu_N`` of the torsion angle of anti-oriented rings."""
 
     return principal_family(n_hinges).torsion_angle
+
+
+def right_angle_family(n_hinges: int, level: int = 1) -> EllipticFamily:
+    """Right-angle critical circle (``c = 0``) with closing index ``level``.
+
+    These are the resonant circles of the paper: the cn family with
+    ``m = N/2`` and ``k = sin(2 pi j / N)``, so ``kappa[n+2] = -kappa[n]`` and
+    ``(1 + kappa[0]**2/4)(1 + kappa[1]**2/4) = sec(2 pi j / N)**2``.  They exist
+    for even ``N`` with ``1 <= j < N/4`` and have ``sigma = (-1)**(N/2)``.
+    ``N = 6, j = 1`` is the classical hexagonal Kaleidocycle.
+    """
+
+    n = int(n_hinges)
+    j = int(level)
+    if n < 6 or n % 2:
+        raise ValueError("right-angle circles need an even n_hinges >= 6")
+    if not 1 <= j < n / 4:
+        raise ValueError(f"level must satisfy 1 <= level < N/4 for N={n}")
+    return elliptic_family(n, n // 2, float(np.sin(2.0 * np.pi * j / n)))
+
+
+def torus_knot_binormals(cells: int, turns: int, *, mirror: bool = False) -> FloatArray:
+    """Explicit rotationally symmetric ring with ``N = 3 * cells`` hinges.
+
+    This is the construction of the quadratic-linking proposition: with
+    ``alpha = 2 pi turns / cells`` the binormal triple ``(u, v, w)`` is
+    repeated by rotations through ``alpha``.  The ring is oriented, has
+    torsion cosine ``-h / (1 + 3h)`` with ``h = cos((pi - alpha)/3)``, all
+    curvatures positive and normalised self-linking ``cells * turns``.  Its
+    centre line is the ``(turns, cells)`` torus knot.  ``mirror=True``
+    applies ``B[n] -> (-1)**n B[n]``, giving monodromy ``(-1)**cells`` and
+    ``SL = 3 cells / 2 - cells * turns``.
+
+    Returns the ``N + 1`` binormals with the terminal value included.
+    """
+
+    m = int(cells)
+    k = int(turns)
+    if m < 3 or not 1 <= k < m / 2 or np.gcd(m, k) != 1:
+        raise ValueError("requires cells >= 3, 1 <= turns < cells/2, gcd = 1")
+    alpha = 2.0 * np.pi * k / m
+    beta = (np.pi - alpha) / 3.0
+    h = np.cos(beta)
+    d = (1.0 + h) * (1.0 + 3.0 * h)
+    r = np.sqrt((1.0 + 4.0 * h) / d)
+    z = -np.sqrt(3.0) * h / np.sqrt(d)
+    t = np.sqrt(3.0) * (1.0 + 2.0 * h) / (2.0 * np.sqrt(d))
+    triple = np.array(
+        [
+            [r * h, r * np.sin(beta), z],
+            [r / 2.0, 0.0, t],
+            [r * h, -r * np.sin(beta), z],
+        ]
+    )
+    blocks = []
+    for index in range(m):
+        cosine, sine = np.cos(index * alpha), np.sin(index * alpha)
+        rotation = np.array(
+            [[cosine, -sine, 0.0], [sine, cosine, 0.0], [0.0, 0.0, 1.0]]
+        )
+        blocks.append(triple @ rotation.T)
+    binormals = np.vstack([*blocks, triple[:1]])
+    if mirror:
+        binormals = binormals * ((-1.0) ** np.arange(binormals.shape[0]))[:, None]
+    return binormals
 
 
 # ---------------------------------------------------------------------------

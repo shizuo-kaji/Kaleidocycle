@@ -3,11 +3,43 @@
   "default": "generic_k15_noncritical",
   "samples": [
     {
+      "name": "classic_k6_right_angle",
+      "file": "classic_k6_right_angle.json",
+      "n": 6,
+      "oriented": false,
+      "kind": "critical",
+      "non_critical": false
+    },
+    {
       "name": "counterexample_k12_self_crossing",
       "file": "counterexample_k12_self_crossing.json",
       "n": 12,
       "oriented": false,
       "kind": "counterexample",
+      "non_critical": false
+    },
+    {
+      "name": "elliptic_k11_m4_saddle",
+      "file": "elliptic_k11_m4_saddle.json",
+      "n": 11,
+      "oriented": true,
+      "kind": "critical",
+      "non_critical": false
+    },
+    {
+      "name": "elliptic_k11_m5_cinquefoil",
+      "file": "elliptic_k11_m5_cinquefoil.json",
+      "n": 11,
+      "oriented": false,
+      "kind": "critical",
+      "non_critical": false
+    },
+    {
+      "name": "elliptic_k17_m7_torus_knot",
+      "file": "elliptic_k17_m7_torus_knot.json",
+      "n": 17,
+      "oriented": false,
+      "kind": "critical",
       "non_critical": false
     },
     {
@@ -64,6 +96,46 @@
       "n": 9,
       "oriented": true,
       "kind": "mobius",
+      "non_critical": false
+    },
+    {
+      "name": "principal_k48_continuum",
+      "file": "principal_k48_continuum.json",
+      "n": 48,
+      "oriented": false,
+      "kind": "critical",
+      "non_critical": false
+    },
+    {
+      "name": "principal_k7_minimum",
+      "file": "principal_k7_minimum.json",
+      "n": 7,
+      "oriented": false,
+      "kind": "critical",
+      "non_critical": false
+    },
+    {
+      "name": "right_angle_k10_energy",
+      "file": "right_angle_k10_energy.json",
+      "n": 10,
+      "oriented": false,
+      "kind": "critical",
+      "non_critical": false
+    },
+    {
+      "name": "right_angle_k8_oriented",
+      "file": "right_angle_k8_oriented.json",
+      "n": 8,
+      "oriented": true,
+      "kind": "critical",
+      "non_critical": false
+    },
+    {
+      "name": "torus_knot_k15_sl10",
+      "file": "torus_knot_k15_sl10.json",
+      "n": 15,
+      "oriented": true,
+      "kind": "knot",
       "non_critical": false
     }
   ]
