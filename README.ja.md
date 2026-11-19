@@ -10,6 +10,19 @@
 ここでは，メビウス・カライドサイクルの設計や動きを計算するためのコンピュータ・コードや，
 折り紙で作成するための展開図，3Dプリンタで出力するためのモデルファイルを公開しています．
 
+## 目次
+- [インタラクティブ・デモ](#インタラクティブデモ)
+- [リポジトリ構成](#リポジトリ構成)
+  - [ドキュメント](#ドキュメント)
+  - [Python](#python)
+- [参考資料](#参考資料)
+  - [特許](#特許)
+  - [ビデオ](#ビデオ)
+  - [和文解説](#和文解説)
+  - [論文や講演](#論文や講演)
+- [ギャラリー](#ギャラリー)
+- [ライセンス](#ライセンス)
+
 ## インタラクティブ・デモ
 
 **[Kaleidocycle Studio をブラウザで開く](https://shizuo-kaji.github.io/Kaleidocycle/)**
@@ -24,20 +37,28 @@ mKdV 階層と半離散 sine–Gordon flow による変形をアニメーショ�
 - [Kaleidocycle.mw](Kaleidocycle.mw) は Maple のコードで，様々な条件下でカライドサイクルの形状や動きを計算し，可視化します．折り紙展開図の出力機能もあります．
 - [Kaleidocycle.nb](Kaleidocycle.nb) は Mathematica のコードで，上の Maple コードの機能限定版です．
 
+## ドキュメント
+- [Python ツールキット](python/README.ja.md)（[English](python/README.md)） —
+  インストール，ノートブック，厳密解の構成，可積分変形，剛性解析，CAD 出力
+- [Kaleidocycle Studio](python/web/README.md)（英語） — ブラウザ版スタジオ：可積分フロー，拘束付き編集，Model lab，解析グラフ
+- [Python API リファレンス](python/api.md)（英語） — 可積分変形の API と，旧コードのルーチン一覧
+- [自己交差の証明データ](python/data/counterexamples/README.md)（英語） — 精度保証付きの K12 自己交差のデータ
+- [3Dプリンタ用のモデル](3d_model/README.ja.md)，[折り紙の展開図と折り方](paper_model/README.ja.md)，[ヘクサフレクサゴン](hexagon/README.ja.md)
+
 ## Python
 1. `cd python`
 2. `uv venv .venv && source .venv/bin/activate`
-3. `pip install -e .[dev]`
+3. `uv pip install -e ".[dev]"`
 4. `pytest` あるいは `pytest -k geometry` でテストを実行
-5. `jupyter lab notebooks/Exploration.ipynb` を開き対話的に探索
+5. `jupyter lab notebooks/FindKaleidocycles.ipynb` を開き対話的に探索
 
-詳細は `python/README.md`を参照してください。
+詳細は [Python ツールキットの README](python/README.ja.md) を参照してください．
 
 # 参考資料
 
 ## 特許
 メビウス・カライドサイクルの形状は以下の特許出願がされていますが，教育・研究・個人利用は全く自由ですので，ぜひ活用されてください．
-* Shizuo Kaji, Johannes Schoenke, Eliot Fried, Michael Grunwald, [Moebius Kaleidocycle](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941), 特顔2018-033395(Japan), 2019JP007314(PCT), WO 2019167941(Publication Number),2018年2月27日出願
+* Shizuo Kaji, Johannes Schoenke, Eliot Fried, Michael Grunwald, [Moebius Kaleidocycle](https://patentscope2.wipo.int/search/en/detail.jsf?docId=WO2019167941), 特願2018-033395(Japan), 2019JP007314(PCT), WO 2019167941(Publication Number),2018年2月27日出願
 
 もし商用利用をお考えの場合は，[Japan Science and Technology Agency](https://www.jst.go.jp/chizai/) にご連絡ください．
 

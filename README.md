@@ -5,9 +5,19 @@
 Kaleidocycles are closed linkage mechanisms shaped like discrete Möbius bands.
 Each unit consists of tetrahedral links that flip inside-out by rotating around
 hinged joints, producing everting motions reminiscent of bubble rings. This
-repository gathers asset needed to model, simulate, and fabricate these
+repository gathers the assets needed to model, simulate, and fabricate these
 mechanisms: Python tooling, Maple/Mathematica notebooks,
 paper templates, and 3D-printable parts.
+
+## Contents
+- [Interactive demo](#interactive-demo)
+- [Repository Tour](#repository-tour)
+- [Documentation](#documentation)
+- [Quick Start](#quick-start)
+- [References & Further Reading](#references--further-reading)
+- [Patent](#patent)
+- [Gallery](#gallery)
+- [License](#license)
 
 ## Interactive demo
 
@@ -29,13 +39,28 @@ and supports interactive editing of vertex positions and torsion-angles.
   for kaleidocycles
 - [`LICENSE`](LICENSE) — MIT license for the code (see the patent note below)
 
+## Documentation
+- [Python toolkit](python/README.md) ([日本語](python/README.ja.md)) —
+  installation, notebooks, exact constructions, integrable deformations,
+  rigidity analysis and CAD export
+- [Kaleidocycle Studio](python/web/README.md) — the browser studio: integrable
+  flows, constrained editing, Model lab and analysis plots
+- [Python API reference](python/api.md) — the integrable-deformation API and
+  the inventory of legacy routines
+- [Self-crossing certificate](python/data/counterexamples/README.md) — data for
+  the certified K12 self-crossing
+- [3D-printable models](3d_model/README.md), [paper models](paper_model/README.md)
+  and the [hexaflexagon](hexagon/README.md)
+
 ## Quick Start
 ### Python toolkit
 1. `cd python`
 2. `uv venv .venv && source .venv/bin/activate`
-3. `pip install -e .[dev]`
+3. `uv pip install -e ".[dev]"`
 4. `pytest` (or `pytest -k geometry`) to run the suite
 5. `jupyter lab notebooks/FindKaleidocycles.ipynb` for interactive exploration
+
+See the [Python toolkit README](python/README.md) for details.
 
 ### Maple / Mathematica
 Open `Kaleidocycle.mw` (Maple) or `Kaleidocycle.nb` (Mathematica) to reproduce
