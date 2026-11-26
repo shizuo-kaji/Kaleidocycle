@@ -115,8 +115,11 @@ the project environment.
 constrained editing of closed constant-torsion kaleidocycles. Its Model lab
 builds exact elliptic critical circles, right-angle circles and torus-knot
 rings in the browser, and its Analysis card plots the curvature profile, the
-QRT phase plane and the closing angle `Theta(k)`. When it is served over HTTP,
-the built-in menu reads the same canonical JSON files in
+QRT phase plane and the closing angle `Theta(k)`. Its 3D print card builds the
+printable twisted-plate links of [`cad.py`](src/kaleidocycle/cad.py) in the
+browser, animates the assembled ring with the flow, saves STL and 3MF print
+plates, and checks the links for contacts through the motion. When it is
+served over HTTP, the built-in menu reads the same canonical JSON files in
 `data/kaleidocycles/` that notebooks load through `load_sample()`.
 
 To run it locally:
@@ -513,7 +516,10 @@ python -m pip install -e ".[cad]"
 ```
 
 If `build123d` is already installed in your conda environment, no extra install
-is needed.
+is needed. Without Python, the same links can be built, animated, checked and
+saved as STL or 3MF in the 3D print card of
+[Kaleidocycle Studio](web/README.md#3d-printable-links); STEP output needs
+this package.
 
 ```python
 from kaleidocycle import (
@@ -613,13 +619,14 @@ printed position.
 - `ruff format` and `ruff check` keep the code to PEP 8 with 88-character
   lines. [`AGENTS.md`](AGENTS.md) records the remaining conventions.
 - `node web/test_sim.js` checks the studio's mathematics against the Python
-  package.
+  package, and `node web/test_print.js` its 3D-print links against build123d.
 
 | Script | Purpose |
 | --- | --- |
 | [`build_web_samples.py`](scripts/build_web_samples.py) | Rebuild `catalog.json` and `web/sample-fallback.js` after changing `data/kaleidocycles/`. |
 | [`build_featured_samples.py`](scripts/build_featured_samples.py) | Regenerate the exact featured samples and the fallback. |
 | [`build_self_crossing.py`](scripts/build_self_crossing.py) | Rebuild the self-crossing sample from `data/counterexamples/`. |
+| [`vendor_manifold.py`](scripts/vendor_manifold.py) | Repackage the npm package manifold-3d as `web/vendor/manifold-classic.js` for the studio's 3D print card. |
 
 ## Further documentation
 

@@ -110,6 +110,8 @@ export_json(cycle, "classic_k6.json")
 [`web/`](web/) には，可積分階層によるアニメーションと，閉じた定捩率カライドサイクルの拘束付き編集のための
 three.js スタジオがあります．Model lab では楕円関数の臨界円，直角円，トーラス結び目のリングを
 ブラウザ上で厳密に構成でき，Analysis カードには曲率の分布，QRT 位相平面，閉じ角 `Theta(k)` のグラフを表示します．
+3D print カードでは [`cad.py`](src/kaleidocycle/cad.py) の印刷用ねじれ板リンクをブラウザ上で作り，
+組み上げたリングをフローで動かし，STL と 3MF の印刷プレートを保存し，運動を通してリンクの接触を検査できます．
 HTTP で配信すると，組み込みメニューはノートブックが `load_sample()` で読むのと同じ
 `data/kaleidocycles/` の JSON ファイルを読み込みます．
 
@@ -454,7 +456,8 @@ anim.compute_scalar_property("max_curvature", func=max_curvature)
 ## 3Dプリント用CADモデル
 
 ねじれ板リンクのパラメトリック 3D CAD 出力（`.stl`，`.step`，`.3mf`）には，オプションの
-`build123d` を使います．
+`build123d` を使います．Python がなくても，[Kaleidocycle Studio](web/README.md#3d-printable-links)（英語）の
+3D print カードで同じリンクを作り，動かし，接触を検査し，STL か 3MF で保存できます．STEP の出力にはこのパッケージが必要です．
 
 ```bash
 python -m pip install -e ".[cad]"
@@ -548,13 +551,15 @@ Bambu Studio 02.08.02 は，Bambu のプロジェクト設定を持たない 3MF
   のマーカーが付いており，`pytest -m "not cad and not jax"` で除外できます．
 - `ruff format` と `ruff check` で，1 行 88 文字の PEP 8 に揃えます．その他の規約は
   [`AGENTS.md`](AGENTS.md)（英語）にあります．
-- `node web/test_sim.js` は，スタジオの数値計算を Python パッケージと照合します．
+- `node web/test_sim.js` はスタジオの数値計算を Python パッケージと，`node web/test_print.js`
+  は 3D print のリンクを build123d と照合します．
 
 | スクリプト | 用途 |
 | --- | --- |
 | [`build_web_samples.py`](scripts/build_web_samples.py) | `data/kaleidocycles/` を変更した後に `catalog.json` と `web/sample-fallback.js` を再生成． |
 | [`build_featured_samples.py`](scripts/build_featured_samples.py) | 厳密解の注目サンプルとフォールバックを再生成． |
 | [`build_self_crossing.py`](scripts/build_self_crossing.py) | `data/counterexamples/` から自己交差のサンプルを再生成． |
+| [`vendor_manifold.py`](scripts/vendor_manifold.py) | npm パッケージ manifold-3d を，スタジオの 3D print カード用に `web/vendor/manifold-classic.js` として再パッケージ． |
 
 ## その他のドキュメント
 

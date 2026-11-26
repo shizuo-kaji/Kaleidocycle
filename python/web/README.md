@@ -118,7 +118,47 @@ spin. This only affects the display; exported JSON is unchanged.
 The view tools reset the camera (`V`), toggle turntable rotation (`A`), save a
 PNG, record a WebM/MP4 clip of the canvas, copy a link, and list the keyboard
 shortcuts (`?`). `Space` runs or pauses the flow, `.` takes a single step, `B`
-reverses it, `[`/`]` change the hierarchy order, and `R` resets the shape.
+reverses it, `[`/`]` change the hierarchy order, `R` resets the shape, and
+`P` shows the printable links.
+
+## 3D-printable links
+
+The **3D print** card builds the twisted-plate links of
+`src/kaleidocycle/cad.py` in the browser and shows the assembled ring in place
+of the tetrahedra (**Show printable links**, `P`). The links follow the flow,
+the phase slider and vertex editing; a change of torsion (the slider, the Model
+lab or another sample) rebuilds them. All N links share the current torsion
+angle `mu` and the print settings:
+
+- ribbon width, edge length, plate thickness (2.4 mm by default), pin or
+  snap-in cone hinges, and the captive print-in-place ring;
+- the **hinge fit**: pin hold (0.09 mm), pin turn (0.3 mm), knuckle gap (empty
+  for 0.4 mm with pins, 0.2 mm with cones) and plate-edge gap (0.4 mm). These
+  are the `pin_fit_clearance`, `pin_clearance`, `hinge_gap` and `gap` of
+  `TwistedPlateConfig`, with the same defaults.
+
+**Print plate** saves a vendor-neutral 3MF with all N links and their pins
+laid out around the centre of a 256 mm bed, **Link STL** one link in its
+printing orientation, and **Assembly** the assembled ring in its current pose
+as STL. STEP files need the Python package.
+
+**Check contacts** traces one cycle of the selected flow from the current pose
+and measures, as `check_kaleidocycle_clearance` does, the smallest gap between
+links that do not share a hinge (in up to 72 poses) and between adjacent links
+away from their shared hinge. Two adjacent links are placed relative to each
+other by the fold angle at their hinge alone, so that gap is evaluated for
+every fold angle that occurs in the cycle: on a 2° grid, refined to 0.25°
+wherever it comes within the sampling error of the 0.4 mm limit. Links in
+contact turn red, and **Closest pose** moves the ring to the closest approach.
+The fit of the hinge itself is checked by the Python package.
+
+The geometry engine, manifold-3d (Apache-2.0), loads on first use from
+`vendor/manifold-classic.js`. That file is the npm package's `manifold.js` and
+`manifold.wasm`, repackaged by `python scripts/vendor_manifold.py` as a classic
+script with the WebAssembly embedded, so the card also works from `file://`.
+The links agree with the build123d models to 0.2 % in volume and 0.02 mm in
+bounding box, and the contact check reproduces the Python results
+(`node test_print.js`).
 
 ## Interactive initial geometry
 
@@ -223,13 +263,19 @@ python scripts/build_web_samples.py
   for mathematical tests.
 - `families.js` — Jacobi elliptic functions, closing moduli, critical circles,
   right-angle circles, torus-knot rings and mirror duality.
+- `printmodel.js` — printable twisted-plate links, pins and captive rings (the
+  geometry of `cad.py` on manifold-3d), link placement along the ring,
+  contact check, and STL and 3MF writers.
 - `test_sim.js` — Node checks of both scripts against the Python package
   (`node test_sim.js`).
+- `test_print.js` — Node checks of `printmodel.js` against build123d and the
+  Python contact check (`node test_print.js`).
 - `../scripts/build_featured_samples.py` — exact featured samples.
 - `sample-fallback.js` — generated direct-file fallback; do not edit by hand.
 - `../scripts/build_web_samples.py` — catalogue/fallback generator.
 - `../data/kaleidocycles/` — canonical named JSON configurations and catalogue.
-- `vendor/` — local three.js build and licence.
+- `vendor/` — local three.js and manifold-3d builds and their licences.
+- `../scripts/vendor_manifold.py` — repackages manifold-3d for `file://` use.
 
 The web editor deliberately replaces the old Rapier rigid-body simulation.
 That simulation approximated hinge constraints dynamically; the new editor is

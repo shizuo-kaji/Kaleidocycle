@@ -4,6 +4,7 @@
   const THREE = window.THREE;
   const Mathematics = window.Kaleidocycle;
   const Families = window.KaleidocycleFamilies;
+  const Print = window.KaleidocyclePrint;
   const staticFallback = window.KALEIDOCYCLE_SAMPLE_FALLBACK;
   const webDirectory = new URL(".", window.location.href);
   const servedFromWebDirectory = /\/web\/$/.test(webDirectory.pathname);
@@ -100,6 +101,25 @@
     copyLink: element("copyLink"),
     help: element("toggleHelp"),
     helpOverlay: element("helpOverlay"),
+    printCard: element("printCard"),
+    printTag: element("printTag"),
+    printShow: element("printShow"),
+    printWidth: element("printWidth"),
+    printEdge: element("printEdge"),
+    printThickness: element("printThickness"),
+    printHinge: element("printHinge"),
+    printRing: element("printRing"),
+    printPinFit: element("printPinFit"),
+    printPinTurn: element("printPinTurn"),
+    printKnuckleGap: element("printKnuckleGap"),
+    printEdgeGap: element("printEdgeGap"),
+    printInfo: element("printInfo"),
+    printPlate: element("printPlate"),
+    printLink: element("printLink"),
+    printAssembly: element("printAssembly"),
+    printCheck: element("printCheck"),
+    printClosest: element("printClosest"),
+    printStatus: element("printStatus"),
   };
 
   const renderer = new THREE.WebGLRenderer({
@@ -209,6 +229,32 @@
   const hinges = new THREE.LineSegments(new THREE.BufferGeometry(), hingeMaterial);
   const handleGroup = new THREE.Group();
   modelGroup.add(mesh, edges, centreline, hinges, handleGroup);
+
+  // Printable twisted-plate links (one instanced mesh per part).
+  const printGroup = new THREE.Group();
+  printGroup.visible = false;
+  modelGroup.add(printGroup);
+  const printMaterials = {
+    plate: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, metalness: 0.03 }),
+    ring: new THREE.MeshStandardMaterial({ color: 0xe8efe4, roughness: 0.5, metalness: 0.04 }),
+    pin: new THREE.MeshStandardMaterial({ color: 0xd9c38f, roughness: 0.38, metalness: 0.32 }),
+  };
+  const printContactColour = new THREE.Color(0xff5a4f).convertSRGBToLinear();
+  const printState = {
+    enabled: false,
+    loading: null,
+    builder: null,
+    unit: null,
+    instances: {},
+    timer: null,
+    building: null,
+    error: "",
+    contacts: new Set(),
+    closestState: null,
+    checking: false,
+    modelRef: null,
+  };
+  let lastDisplay = null;
 
   let model;
   let modelMetadata = {};
@@ -453,6 +499,7 @@
     const hingePositions = [];
     const display = displayGeometry();
     displayedPoints = display.points;
+    lastDisplay = display;
     const points = display.points.map(threeVector);
     const binormals = display.binormals.map(threeVector);
     const width = Number(controls.ribbonWidth.value);
@@ -546,7 +593,480 @@
     hinges.visible = controls.hinges.checked;
     handleGroup.visible = controls.handles.checked;
     surfaceMaterial.opacity = Number(controls.opacity.value);
+    const showPrint = printState.enabled && Boolean(printState.unit);
+    mesh.visible = !showPrint;
+    edges.visible = !showPrint;
+    printGroup.visible = showPrint;
+    if (printState.enabled) updatePrintInstances(display, curvatureScale);
     updateDiagnostics();
+  }
+
+  // ---------------------------------------------------------------------------
+  // 3D print: twisted-plate links built in the browser with manifold-3d.
+
+  const PRINT_ENGINE_URL = "vendor/manifold-classic.js";
+  const printMatrix = new THREE.Matrix4();
+  const nextTask = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  function printNumber(input, fallback) {
+    if (input.value === "") return fallback;
+    const value = Number(input.value);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function printOverrides() {
+    const defaults = Print.DEFAULTS;
+    return {
+      ribbon_width: printNumber(controls.printWidth, defaults.ribbon_width),
+      edge_length: printNumber(controls.printEdge, defaults.edge_length),
+      body_thickness: printNumber(controls.printThickness, defaults.body_thickness),
+      hinge_type: controls.printHinge.value,
+      with_ring: controls.printRing.checked,
+      pin_fit_clearance: printNumber(controls.printPinFit, defaults.pin_fit_clearance),
+      pin_clearance: printNumber(controls.printPinTurn, defaults.pin_clearance),
+      hinge_gap: printNumber(controls.printKnuckleGap, null),
+      gap: printNumber(controls.printEdgeGap, defaults.gap),
+    };
+  }
+
+  function setPrintTag(text) {
+    controls.printTag.textContent = text;
+  }
+
+  function setPrintStatus(text, isError = false) {
+    controls.printStatus.textContent = text;
+    controls.printStatus.classList.toggle("error", isError);
+  }
+
+  function loadPrintEngine() {
+    if (printState.builder) return Promise.resolve(printState.builder);
+    if (printState.loading) return printState.loading;
+    setPrintTag("Loading…");
+    printState.loading = new Promise((resolve, reject) => {
+      if (window.KaleidocycleManifold) {
+        resolve();
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = PRINT_ENGINE_URL;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error(`Could not load web/${PRINT_ENGINE_URL}.`));
+      document.head.append(script);
+    })
+      .then(() => window.KaleidocycleManifold.load())
+      .then((wasm) => {
+        printState.builder = Print.createBuilder(wasm);
+        return printState.builder;
+      });
+    printState.loading.catch(() => {
+      printState.loading = null;
+    });
+    return printState.loading;
+  }
+
+  function currentPlacements(display = lastDisplay) {
+    return Print.linkPlacements(display.points, display.binormals);
+  }
+
+  function printKey(overrides, alpha) {
+    return JSON.stringify({ ...overrides, alpha: Math.round(alpha * 1e5) });
+  }
+
+  function disposePrintUnit() {
+    const unit = printState.unit;
+    if (!unit) return;
+    Object.values(unit.manifolds).forEach((item) => item?.delete());
+    printState.unit = null;
+  }
+
+  function geometryFromMesh({ positions, indices }) {
+    const indexed = new THREE.BufferGeometry();
+    indexed.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    indexed.setIndex(new THREE.BufferAttribute(indices, 1));
+    const flat = indexed.toNonIndexed();
+    indexed.dispose();
+    flat.computeVertexNormals();
+    return flat;
+  }
+
+  function createPrintMeshes() {
+    Object.values(printState.instances).forEach((instanced) => {
+      printGroup.remove(instanced);
+      instanced.geometry.dispose();
+      instanced.dispose?.();
+    });
+    printState.instances = {};
+    const unit = printState.unit;
+    if (!unit || !model) return;
+    Object.entries(unit.meshes).forEach(([part, arrays]) => {
+      const instanced = new THREE.InstancedMesh(
+        geometryFromMesh(arrays),
+        printMaterials[part],
+        model.n,
+      );
+      instanced.castShadow = true;
+      instanced.receiveShadow = true;
+      instanced.frustumCulled = false;
+      printState.instances[part] = instanced;
+      printGroup.add(instanced);
+    });
+  }
+
+  function updatePrintInstances(display, curvatureScale) {
+    const unit = printState.unit;
+    if (!unit || !display) return;
+    if (printState.modelRef !== model) {
+      printState.modelRef = model;
+      printState.contacts.clear();
+      printState.closestState = null;
+      controls.printClosest.disabled = true;
+    }
+    if (printState.instances.plate?.count !== model.n) createPrintMeshes();
+    const placements = currentPlacements(display);
+    const scale = 1 / unit.cfg.edge_length;
+    const zb = unit.cfg.zBottomHinge;
+    const { plate, ring, pin } = printState.instances;
+    placements.forEach((placement, index) => {
+      printMatrix.fromArray(Print.placementMatrix(placement, scale, zb));
+      plate.setMatrixAt(index, printMatrix);
+      ring?.setMatrixAt(index, printMatrix);
+      if (pin) {
+        printMatrix.fromArray(Print.placementMatrix(placement, scale, zb, false));
+        pin.setMatrixAt(index, printMatrix);
+      }
+      const colour = printState.contacts.has(index)
+        ? printContactColour
+        : linkColours(index, curvatureScale)[0].clone().convertSRGBToLinear();
+      plate.setColorAt(index, colour);
+    });
+    [plate, ring, pin].forEach((instanced) => {
+      if (instanced) instanced.instanceMatrix.needsUpdate = true;
+    });
+    if (plate.instanceColor) plate.instanceColor.needsUpdate = true;
+    // The torsion moved (slider, Model lab): rebuild the link.
+    if (Math.abs(placements[0].alpha - unit.alpha) > 2e-4) schedulePrintBuild();
+  }
+
+  function schedulePrintBuild(delay = 160) {
+    clearTimeout(printState.timer);
+    printState.timer = setTimeout(() => {
+      printState.timer = null;
+      buildPrintUnit().catch((error) => console.error(error));
+    }, delay);
+  }
+
+  async function buildPrintUnit() {
+    if (!model || !lastDisplay) return null;
+    if (printState.building) return printState.building;
+    printState.building = (async () => {
+      let builder;
+      try {
+        builder = await loadPrintEngine();
+      } catch (error) {
+        printState.error = error.message;
+        setPrintTag("Error");
+        setPrintStatus(error.message, true);
+        return null;
+      }
+      const overrides = printOverrides();
+      const alpha = currentPlacements()[0].alpha;
+      let cfg;
+      let parts;
+      let pin = null;
+      const start = performance.now();
+      try {
+        cfg = Print.validate(Print.config({ ...overrides, torsion_angle: alpha }));
+        parts = builder.unit(cfg);
+        if (cfg.usesPins) pin = builder.pin(cfg);
+      } catch (error) {
+        printState.error = error instanceof Error ? error.message : String(error);
+        setPrintTag("Check settings");
+        setPrintStatus(`Cannot build the link: ${printState.error}.`, true);
+        return null;
+      }
+      const meshes = { plate: Print.meshArrays(parts.plate) };
+      if (parts.ring) meshes.ring = Print.meshArrays(parts.ring);
+      if (pin) meshes.pin = Print.meshArrays(pin);
+      disposePrintUnit();
+      printState.unit = {
+        cfg,
+        alpha,
+        key: printKey(overrides, alpha),
+        meshes,
+        manifolds: { plate: parts.plate, ring: parts.ring || null, pin },
+        triangles: Object.values(meshes).reduce((sum, item) => sum + item.indices.length / 3, 0),
+        millis: performance.now() - start,
+      };
+      printState.error = "";
+      printState.contacts.clear();
+      printState.closestState = null;
+      controls.printClosest.disabled = true;
+      createPrintMeshes();
+      updatePrintInfo();
+      setPrintTag(printState.enabled ? "Live" : "Ready");
+      setPrintStatus(
+        "Links follow the flow, the phase slider and editing; a torsion change rebuilds them. " +
+          "Check contacts traces one cycle of the selected flow.",
+      );
+      rebuildGeometry();
+      return printState.unit;
+    })();
+    try {
+      return await printState.building;
+    } finally {
+      printState.building = null;
+    }
+  }
+
+  /** The link for the current settings and torsion, built if needed. */
+  async function ensurePrintUnit() {
+    if (!model) return null;
+    if (!lastDisplay) rebuildGeometry();
+    const key = printKey(printOverrides(), currentPlacements()[0].alpha);
+    if (printState.unit?.key === key) return printState.unit;
+    clearTimeout(printState.timer);
+    printState.timer = null;
+    return buildPrintUnit();
+  }
+
+  function updatePrintInfo() {
+    const unit = printState.unit;
+    if (!unit) return;
+    const cfg = unit.cfg;
+    const mm = (value) => `${Number(value.toFixed(2))}`;
+    const hinge = cfg.usesPins
+      ? `pin bores ${mm(2 * cfg.fixedBoreRadius)} / ${mm(2 * cfg.freeBoreRadius)} mm`
+      : `${mm(cfg.cone_diameter)} mm snap-in cones`;
+    controls.printInfo.classList.remove("error");
+    controls.printInfo.textContent =
+      `μ = ${cfg.torsionDegrees.toFixed(2)}° · link ${mm(cfg.ribbon_width)} × ${mm(cfg.edge_length)} mm, ` +
+      `${mm(cfg.body_thickness)} mm plate · ${hinge}, knuckle gap ${mm(cfg.hingeGap)} mm · ` +
+      `${unit.triangles.toLocaleString("en-GB")} triangles, ${Math.round(unit.millis)} ms`;
+  }
+
+  function setPrintEnabled(enabled) {
+    printState.enabled = enabled;
+    controls.printShow.checked = enabled;
+    if (enabled) {
+      setPrintTag(printState.unit ? "Live" : "Loading…");
+      ensurePrintUnit().catch((error) => console.error(error));
+    } else {
+      setPrintTag(printState.unit ? "Ready" : "Off");
+    }
+    rebuildGeometry();
+  }
+
+  function printBaseName() {
+    const orientation = model.sign > 0 ? "oriented" : "anti_oriented";
+    const name = currentFileName && currentFileName !== "kaleidocycle"
+      ? currentFileName
+      : `k${model.n}_${orientation}`;
+    return name.replace(/[^\w.-]+/g, "_");
+  }
+
+  async function withPrintUnit(label, action) {
+    const buttons = [controls.printPlate, controls.printLink, controls.printAssembly, controls.printCheck];
+    buttons.forEach((button) => { button.disabled = true; });
+    try {
+      setPrintStatus(`${label}…`);
+      const unit = await ensurePrintUnit();
+      if (!unit) return;
+      await nextTask();
+      await action(unit);
+    } catch (error) {
+      console.error(error);
+      setPrintStatus(error instanceof Error ? error.message : String(error), true);
+    } finally {
+      buttons.forEach((button) => { button.disabled = false; });
+    }
+  }
+
+  function unitParts(unit) {
+    const parts = [{ name: "plate", mesh: unit.meshes.plate }];
+    if (unit.meshes.ring) parts.push({ name: "ring", mesh: unit.meshes.ring });
+    return parts;
+  }
+
+  function exportPrintPlate() {
+    return withPrintUnit("Writing the print plate", async (unit) => {
+      const parts = unitParts(unit);
+      const objects = [{ key: "unit", name: "twisted_plate", parts }];
+      const { lo, hi } = Print.bounds(parts.map((part) => part.mesh));
+      let pinLength = 0;
+      let pinWidth = 0;
+      if (unit.meshes.pin) {
+        const pinBox = Print.bounds([unit.meshes.pin]);
+        pinLength = pinBox.hi[0] - pinBox.lo[0];
+        pinWidth = pinBox.hi[1] - pinBox.lo[1];
+        objects.push({ key: "pin", name: "hinge_pin", parts: [{ name: "pin", mesh: unit.meshes.pin }] });
+      }
+      const layout = Print.plateLayout(model.n, hi[0] - lo[0], hi[1] - lo[1], {
+        pinCount: unit.meshes.pin ? model.n : 0,
+        pinLength,
+        pinWidth,
+      });
+      const items = [
+        ...layout.units.map(([x, y]) => ({ key: "unit", x, y })),
+        ...layout.pins.map(([x, y]) => ({ key: "pin", x, y })),
+      ];
+      const name = `${printBaseName()}_plate`;
+      const bytes = await Print.threeMF({ title: name, objects, items });
+      download(new Blob([bytes], { type: "model/3mf" }), `${name}.3mf`);
+      const halfWidth = 0.5 * Math.max(hi[0] - lo[0], pinLength);
+      const halfDepth = 0.5 * Math.max(hi[1] - lo[1], pinWidth);
+      const xs = items.map((item) => item.x);
+      const ys = items.map((item) => item.y);
+      const span = Math.max(
+        Math.max(...xs) + halfWidth - (Math.min(...xs) - halfWidth),
+        Math.max(...ys) + halfDepth - (Math.min(...ys) - halfDepth),
+      );
+      setPrintStatus(
+        `Saved ${name}.3mf: ${model.n} links${unit.meshes.pin ? ` and ${model.n} pins` : ""} ` +
+          `around the centre of a 256 mm bed (${Math.ceil(span)} mm across).` +
+          (span > 256 ? " The layout is larger than a 256 mm bed: print it in batches." : ""),
+      );
+    });
+  }
+
+  function exportPrintLink() {
+    return withPrintUnit("Writing the link", async (unit) => {
+      const name = `${printBaseName()}_unit`;
+      const buffer = Print.stl(unitParts(unit).map((part) => part.mesh), name);
+      download(new Blob([buffer], { type: "model/stl" }), `${name}.stl`);
+      setPrintStatus(`Saved ${name}.stl (one link, in its printing orientation).`);
+    });
+  }
+
+  function exportPrintAssembly() {
+    return withPrintUnit("Writing the assembly", async (unit) => {
+      const E = unit.cfg.edge_length;
+      const zb = unit.cfg.zBottomHinge;
+      const placements = Print.linkPlacements(
+        lastDisplay.points.map((point) => point.map((value) => value * E)),
+        lastDisplay.binormals,
+      );
+      const meshes = [];
+      placements.forEach((placement) => {
+        const matrix = Print.placementMatrix(placement, 1, zb);
+        unitParts(unit).forEach((part) => meshes.push({ ...part.mesh, matrix }));
+        if (unit.meshes.pin) {
+          meshes.push({ ...unit.meshes.pin, matrix: Print.placementMatrix(placement, 1, zb, false) });
+        }
+      });
+      const name = `${printBaseName()}_assembly`;
+      download(new Blob([Print.stl(meshes, name)], { type: "model/stl" }), `${name}.stl`);
+      setPrintStatus(`Saved ${name}.stl (the assembled ring in the current pose).`);
+    });
+  }
+
+  function checkPrintContacts() {
+    return withPrintUnit("Tracing one cycle of the flow", async (unit) => {
+      setRunning(false);
+      const kind = controls.flowKind.value;
+      const order = Number(controls.flowOrder.value);
+      const copy = new Mathematics.Model({ n: model.n, hinges: model.hinges() });
+      const trace = Print.traceCycle(copy, kind, order);
+      const E = unit.cfg.edge_length;
+      const zb = unit.cfg.zBottomHinge;
+      const placementsOf = (state) => Print.linkPlacements(
+        state.points.map((point) => point.map((v) => v * E)),
+        state.binormals,
+      );
+      const angleSets = trace.states.map((state) => Print.foldAngles(placementsOf(state), unit.alpha));
+      const stride = Math.max(1, Math.ceil(trace.states.length / 72));
+      const sampledIndices = trace.states.map((_, index) => index).filter((index) => index % stride === 0);
+      const poses = sampledIndices.map((index) =>
+        placementsOf(trace.states[index]).map((placement) => Print.placementMatrix(placement, 1, zb)));
+      const bodies = printState.builder.linkBodies(unit.manifolds, unit.manifolds.pin, unit.cfg);
+      let result;
+      try {
+        result = await Print.linkGaps(bodies, unit.cfg, {
+          poses,
+          angles: angleSets.flat(),
+          onProgress: async (done, total) => {
+            setPrintStatus(`Measuring the gaps between links: ${Math.round((100 * done) / total)} %…`);
+            await nextTask();
+          },
+        });
+      } finally {
+        bodies.delete();
+      }
+      const limit = Print.MIN_CLEARANCE;
+      const n = model.n;
+      // Links in contact: non-adjacent pairs, and hinges that reach a contact angle.
+      const contacts = new Set(result.nonAdjacentContacts.flatMap((pair) => [pair.i, pair.j]));
+      const near = (theta) => result.adjacentContactAngles.some(
+        (angle) => Math.abs(angle - theta) <= result.fineStep,
+      );
+      const hingesInContact = new Set();
+      angleSets.forEach((angles) => angles.forEach((theta, hinge) => {
+        if (near(theta)) hingesInContact.add(hinge);
+      }));
+      hingesInContact.forEach((hinge) => {
+        contacts.add(hinge);
+        contacts.add((hinge + 1) % n);
+      });
+      printState.contacts = contacts;
+      // Pose of the closest approach.
+      const adjacentFirst = result.adjacent &&
+        (!result.nonAdjacent || result.adjacent.gap <= result.nonAdjacent.gap);
+      let closestIndex = null;
+      if (adjacentFirst) {
+        let bestDistance = Infinity;
+        angleSets.forEach((angles, index) => angles.forEach((theta) => {
+          const distance = Math.abs(theta - result.adjacent.theta);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            closestIndex = index;
+          }
+        }));
+      } else if (result.nonAdjacent) {
+        closestIndex = sampledIndices[result.nonAdjacent.pose];
+      }
+      printState.closestState = closestIndex === null ? null : trace.states[closestIndex].state;
+      controls.printClosest.disabled = !printState.closestState;
+      const flow = kind === "sine-gordon" ? "the sine–Gordon flow" : `X${order}`;
+      const span = trace.periodic
+        ? `one cycle of ${flow}`
+        : `${trace.states.length} steps of ${flow}, which did not return to the start`;
+      const describe = (item, links) => {
+        if (!item) return "—";
+        if (item.gap >= 3) return "more than 3 mm";
+        return `${item.gap.toFixed(2)} mm${links ? ` (links ${item.i + 1} and ${item.j + 1})` : ""}`;
+      };
+      const summary =
+        `adjacent links away from their hinge ${describe(result.adjacent, false)}, ` +
+        `other links ${describe(result.nonAdjacent, true)}`;
+      const adjacentHit = result.adjacentContactAngles.length > 0;
+      const otherHits = result.nonAdjacentContacts.length;
+      if (adjacentHit || otherHits) {
+        const counts = [
+          adjacentHit ? "adjacent links" : "",
+          otherHits ? `${otherHits} pair(s) of links that do not share a hinge` : "",
+        ].filter(Boolean).join(" and ");
+        setPrintStatus(
+          `Contact over ${span}: ${counts} come closer than ${limit} mm (shown in red). ` +
+            `Closest: ${summary}. Narrow the ribbon or thin the plates.`,
+          true,
+        );
+      } else {
+        setPrintStatus(
+          `OK over ${span}: ${summary} (${limit} mm required). ` +
+            "The hinge fit itself is checked in Python.",
+        );
+      }
+      rebuildGeometry();
+    });
+  }
+
+  function showClosestPose() {
+    if (!printState.closestState) return;
+    setRunning(false);
+    model.restore(printState.closestState);
+    currentCircle = null;
+    updatePhaseControl();
+    rebuildGeometry();
+    toast("Moved to the pose of the closest approach.");
   }
 
   function metric(value) {
@@ -1660,6 +2180,38 @@
     toast("The current constrained configuration was exported.");
   });
 
+  if (Print) {
+    const defaults = Print.DEFAULTS;
+    controls.printWidth.value = String(defaults.ribbon_width);
+    controls.printEdge.value = String(defaults.edge_length);
+    controls.printThickness.value = String(defaults.body_thickness);
+    controls.printHinge.value = defaults.hinge_type;
+    controls.printRing.checked = defaults.with_ring;
+    controls.printPinFit.value = String(defaults.pin_fit_clearance);
+    controls.printPinTurn.value = String(defaults.pin_clearance);
+    controls.printEdgeGap.value = String(defaults.gap);
+    const settingInputs = [
+      controls.printWidth, controls.printEdge, controls.printThickness, controls.printHinge,
+      controls.printRing, controls.printPinFit, controls.printPinTurn,
+      controls.printKnuckleGap, controls.printEdgeGap,
+    ];
+    settingInputs.forEach((input) => input.addEventListener("change", () => {
+      printState.contacts.clear();
+      printState.closestState = null;
+      controls.printClosest.disabled = true;
+      if (printState.enabled) schedulePrintBuild(60);
+      else setPrintTag(printState.unit ? "Ready" : "Off");
+    }));
+    controls.printShow.addEventListener("change", () => setPrintEnabled(controls.printShow.checked));
+    controls.printPlate.addEventListener("click", exportPrintPlate);
+    controls.printLink.addEventListener("click", exportPrintLink);
+    controls.printAssembly.addEventListener("click", exportPrintAssembly);
+    controls.printCheck.addEventListener("click", checkPrintContacts);
+    controls.printClosest.addEventListener("click", showClosestPose);
+  } else {
+    controls.printCard.hidden = true;
+  }
+
   controls.capture.addEventListener("click", () => {
     renderer.render(scene, camera);
     const anchor = document.createElement("a");
@@ -1863,6 +2415,7 @@
     else if (key === "m" || key === "M") mirrorModel();
     else if (key === "v" || key === "V") resetCamera();
     else if (key === "a" || key === "A") setAutoRotate(!autoRotate);
+    else if ((key === "p" || key === "P") && Print) setPrintEnabled(!printState.enabled);
     else if (key === "?") toggleHelp();
     else if (key === "Escape") toggleHelp(false);
   });

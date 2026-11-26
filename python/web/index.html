@@ -273,6 +273,25 @@
       cursor: pointer;
     }
     input[type="range"] { width: 100%; height: 18px; margin: 0; cursor: pointer; }
+    input[type="number"] {
+      width: 100%;
+      height: 36px;
+      padding: 0 8px 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--ink);
+      background: var(--panel-solid);
+      font: 520 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    input[type="number"]::placeholder { color: var(--faint); }
+    details.print-fit summary {
+      color: var(--muted);
+      font-size: 11px;
+      cursor: pointer;
+      user-select: none;
+    }
+    details.print-fit[open] summary { margin-bottom: 8px; }
+    .print-grid { row-gap: 10px; }
 
     .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
     .button-grid.three { grid-template-columns: 1.3fr 1fr 1fr; }
@@ -319,6 +338,7 @@
       line-height: 1.5;
     }
     .hint em { color: var(--muted); font-style: normal; }
+    .hint.error { color: var(--red); }
 
     .metrics {
       display: grid;
@@ -467,6 +487,7 @@
           <dt>M</dt><dd>Mirror dual</dd>
           <dt>V</dt><dd>Reset the camera</dd>
           <dt>A</dt><dd>Turntable rotation</dd>
+          <dt>P</dt><dd>Show or hide the printable links</dd>
           <dt>?</dt><dd>Show or hide this list</dd>
         </dl>
       </div>
@@ -580,6 +601,38 @@
         <p class="hint">Pull a highlighted centre-line vertex to move the shape. <em>Mirror</em> applies B[n] ↦ (−1)ⁿB[n]: μ ↦ π − μ, σ ↦ (−1)ᴺσ and SL ↦ N/2 − SL.</p>
       </section>
 
+      <section class="card" id="printCard">
+        <div class="card-title"><h3>3D print</h3><span id="printTag">Off</span></div>
+        <label class="switch-row control" title="Replace the tetrahedra by the printable twisted-plate links; they follow the flow, the phase slider and editing (P)"><span>Show printable links</span><input id="printShow" type="checkbox"></label>
+        <div class="field-grid print-grid control">
+          <label><span class="label-line"><span>Ribbon width (mm)</span></span><input id="printWidth" type="number" min="10" max="150" step="0.5"></label>
+          <label><span class="label-line"><span>Edge length (mm)</span></span><input id="printEdge" type="number" min="10" max="120" step="0.5"></label>
+          <label><span class="label-line"><span>Plate thickness (mm)</span></span><input id="printThickness" type="number" min="0.8" max="6" step="0.1"></label>
+          <label><span class="label-line"><span>Hinges</span></span><select id="printHinge" aria-label="Hinges"><option value="pin">Pins</option><option value="cone">Snap-in cones</option></select></label>
+        </div>
+        <label class="switch-row control"><span>Captive print-in-place ring</span><input id="printRing" type="checkbox"></label>
+        <details class="print-fit control">
+          <summary>Hinge fit (tune after a test print)</summary>
+          <div class="field-grid print-grid">
+            <label title="Radial clearance between the pin corners and the bores of the bottom knuckles, which hold the pin. Raise it if the pin does not go in; lower it if the pin slides out."><span class="label-line"><span>Pin hold (mm)</span></span><input id="printPinFit" type="number" min="-0.3" max="0.5" step="0.01"></label>
+            <label title="Radial clearance between the pin corners and the bores of the top knuckles, which turn on the pin. Raise it if the hinge turns stiffly."><span class="label-line"><span>Pin turn (mm)</span></span><input id="printPinTurn" type="number" min="0" max="0.6" step="0.01"></label>
+            <label title="Axial gap between neighbouring knuckles. Empty: 0.4 mm for pins, 0.2 mm for cones."><span class="label-line"><span>Knuckle gap (mm)</span></span><input id="printKnuckleGap" type="number" min="0" max="2" step="0.05" placeholder="auto"></label>
+            <label title="Clearance between the knuckles and the plate edge bridged over them."><span class="label-line"><span>Plate-edge gap (mm)</span></span><input id="printEdgeGap" type="number" min="0" max="2" step="0.05"></label>
+          </div>
+        </details>
+        <p class="lab-info" id="printInfo">The geometry engine loads on first use.</p>
+        <div class="button-grid three control">
+          <button class="primary-button" id="printPlate" title="All links and their pins laid out around the centre of a 256 mm bed, as 3MF">Print plate</button>
+          <button class="ghost-button" id="printLink" title="One link as STL">Link STL</button>
+          <button class="ghost-button" id="printAssembly" title="The assembled ring in its current pose, as STL">Assembly</button>
+        </div>
+        <div class="button-grid control">
+          <button class="ghost-button" id="printCheck" title="Trace one cycle of the selected flow and measure the gaps between links that do not share a hinge">Check contacts</button>
+          <button class="ghost-button" id="printClosest" disabled title="Move the ring to the pose of the closest approach found by the check">Closest pose</button>
+        </div>
+        <p class="hint" id="printStatus">Links are twisted plates joined by hinge pins, as in <em>CADModelGeneration.ipynb</em>. All N links share the current torsion μ. STEP files need the Python package.</p>
+      </section>
+
       <section class="card">
         <div class="card-title"><h3>Analysis</h3><span id="analysisTag">Live</span></div>
         <div class="segmented three" role="tablist" aria-label="Analysis view">
@@ -638,6 +691,7 @@
   <script src="sample-fallback.js"></script>
   <script src="sim.js"></script>
   <script src="families.js"></script>
+  <script src="printmodel.js"></script>
   <script src="viewer.js"></script>
 </body>
 </html>

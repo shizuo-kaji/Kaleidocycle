@@ -354,6 +354,37 @@ class TestTwistedPlateConfig:
         assert units == _compute_plate_positions(7, 45.0, 43.0, spacing=6.0)
 
 
+def test_studio_print_model_mirrors_twisted_plate_config():
+    """web/printmodel.js (the studio's 3D-print links) uses the same defaults."""
+    import dataclasses
+    import json
+    import re
+    from pathlib import Path
+
+    from kaleidocycle import cad
+
+    source = (Path(__file__).resolve().parents[1] / "web" / "printmodel.js").read_text()
+
+    def literal(name: str) -> dict:
+        match = re.search(rf"const {name} = (\{{.*?\n  \}});", source, re.S)
+        assert match, name
+        return json.loads(match.group(1))
+
+    defaults = literal("DEFAULTS")
+    expected = {f.name: f.default for f in dataclasses.fields(TwistedPlateConfig)}
+    assert defaults.keys() == expected.keys()
+    for key, value in expected.items():
+        assert defaults[key] == pytest.approx(value) if isinstance(value, float) else (
+            defaults[key] == value
+        ), key
+    constants = literal("CONSTANTS")
+    assert constants["min_wall"] == cad._MIN_WALL
+    assert constants["knuckle_foot_depth"] == cad._KNUCKLE_FOOT_DEPTH
+    assert constants["bore_flat_margin"] == cad._BORE_FLAT_MARGIN
+    assert constants["default_hinge_diameter"] == cad._DEFAULT_HINGE_DIAMETER
+    assert constants["default_hinge_gap"] == cad._DEFAULT_HINGE_GAP
+
+
 class TestThreeMFWriter:
     """Structure of the 3MF writer, using fake solids (no build123d needed)."""
 
