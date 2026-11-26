@@ -205,18 +205,26 @@ class TestTwistedPlateConfig:
         assert cfg.resolved_hinge_diameter == 7.0
         assert TwistedPlateConfig(hinge_type="cone").resolved_hinge_diameter == 6.0
 
-    def test_default_hinge_fit_matches_reference_design(self):
-        # Octagonal 4 mm pin, held at zero corner clearance in the bottom
-        # knuckles and rotating with 0.2 mm clearance in the top knuckles.
+    def test_default_hinge_fit(self):
+        # Octagonal 4 mm pin, held with 0.09 mm corner clearance in the bottom
+        # knuckles and rotating with 0.3 mm clearance in the top knuckles;
+        # 0.4 mm axial gaps between pin knuckles, 0.2 mm for cone hinges.
         cfg = TwistedPlateConfig()
         assert cfg.pin_radius == 2.0
         assert np.isclose(cfg.pin_inradius, 2.0 * np.cos(np.pi / 8))
-        assert cfg.fixed_bore_radius == cfg.pin_radius
-        assert np.isclose(cfg.free_bore_radius, cfg.pin_radius + 0.2)
-        assert cfg.pin_radius < cfg.bore_flat_height < cfg.free_bore_radius
-        assert cfg.hinge_radius - cfg.free_bore_radius >= 0.8
+        assert np.isclose(cfg.fixed_bore_radius, cfg.pin_radius + 0.09)
+        assert np.isclose(cfg.free_bore_radius, cfg.pin_radius + 0.3)
+        # The flat teardrop tops sit above each bore circle, so a sagging
+        # bridge does not reach the turning pin.
+        assert cfg.fixed_bore_flat_height > cfg.fixed_bore_radius
+        assert cfg.free_bore_flat_height > cfg.free_bore_radius
+        assert cfg.hinge_radius - cfg.free_bore_flat_height >= 0.8
         assert cfg.z_bottom_hinge - cfg.fixed_bore_radius >= 0.8
-        assert cfg.hinge_gap == 0.2
+        assert cfg.hinge_gap is None and cfg.resolved_hinge_gap == 0.4
+        assert TwistedPlateConfig(hinge_type="cone").resolved_hinge_gap == 0.2
+        assert TwistedPlateConfig(hinge_gap=0.3).resolved_hinge_gap == 0.3
+        assert cfg.gap == 0.4
+        assert cfg.body_thickness == 2.4
         assert np.isclose(cfg.z_top_hinge - cfg.z_bottom_hinge, cfg.edge_length)
 
     @pytest.mark.parametrize(
@@ -259,7 +267,7 @@ class TestTwistedPlateConfig:
         assert knuckles[0][0] == -cfg.ribbon_width / 2
         assert knuckles[-1][1] == cfg.ribbon_width / 2
         gaps = [b[0] - a[1] for a, b in zip(knuckles[:-1], knuckles[1:], strict=True)]
-        np.testing.assert_allclose(gaps, cfg.hinge_gap)
+        np.testing.assert_allclose(gaps, cfg.resolved_hinge_gap)
 
     def test_cone_hinge_matches_reference_layout(self):
         # NovemberKou's "Twisted Plate with Ring", 45 mm wide: 9 mm bottom
@@ -274,7 +282,7 @@ class TestTwistedPlateConfig:
         np.testing.assert_allclose(top, [(-13.3, -6.75), (6.75, 13.3)], atol=1e-9)
         assert np.isclose(cfg.cone_height, 2.0 / np.sqrt(3.0))
         assert cfg.hinge_radius == 3.0
-        assert np.isclose(cfg.snap_deflection, cfg.cone_height - cfg.hinge_gap)
+        assert np.isclose(cfg.snap_deflection, cfg.cone_height - cfg.resolved_hinge_gap)
 
     def test_from_kaleidocycle(self):
         kc = load_sample("mobius_k7_oriented")
@@ -445,20 +453,26 @@ class TestTwistedPlateCAD:
 
     @pytest.mark.parametrize("roll_deg", [0.0, 22.5])
     def test_pin_fit_in_fixed_and_free_bores(self, roll_deg):
-        """The pin is gripped by the bottom knuckles and turns in the top ones.
+        """The pin slides into the bottom knuckles and turns in the top ones.
 
-        A nominal pin touches the fixed bores only at its corners and clears
-        the free bores; a pin 0.05 mm oversize already bites into the fixed
-        bores (so a slightly fat print cannot wobble there) but still turns
-        freely in the free bores.
+        A nominal pin clears both bores.  A pin printed 0.05 mm fatter than
+        the fixed-bore clearance bites into the fixed bores (so it cannot
+        wobble there) but still turns freely in the free bores, in every
+        orientation up to almost ``pin_clearance`` oversize: the flat tops of
+        the bores sit above the bore circles.
         """
         bd = _require_cad()
         cfg = TwistedPlateConfig()
         plate = build_twisted_plate_parts(cfg)["plate"]
 
         def overlap(oversize: float) -> tuple[float, float]:
+            # A fatter pin with the bores of ``cfg`` (only the pin is built).
             pin = build_hinge_pin(
-                cfg, pin_diameter=cfg.pin_diameter + 2 * oversize, pin_chamfer=0.0
+                cfg,
+                pin_diameter=cfg.pin_diameter + 2 * oversize,
+                pin_fit_clearance=cfg.pin_fit_clearance - oversize,
+                pin_clearance=cfg.pin_clearance - oversize,
+                pin_chamfer=0.0,
             )
             pin = bd.Rotation(roll_deg, 0.0, 0.0) * pin
             in_fixed = pin.moved(bd.Location((0.0, 0.0, cfg.z_bottom_hinge)))
@@ -468,9 +482,11 @@ class TestTwistedPlateCAD:
             return _overlap(plate, in_fixed), _overlap(plate, in_free)
 
         fixed, free = overlap(0.0)
-        assert fixed < 1e-3 and free < 1e-6
-        fixed, free = overlap(0.05)
+        assert fixed < 1e-6 and free < 1e-6
+        fixed, free = overlap(cfg.pin_fit_clearance + 0.05)
         assert fixed > 0.5 and free < 1e-6
+        _, free = overlap(cfg.pin_clearance - 0.05)
+        assert free < 1e-6
 
     def test_build_plate_with_ring(self):
         bd = _require_cad()
@@ -525,7 +541,7 @@ class TestTwistedPlateCAD:
         report = check_hinge_fit(cfg)
         assert report.ok
         # Axial play of the cone in its socket, measured normal to the cone.
-        expected = cfg.hinge_gap * np.sin(np.radians(cfg.cone_angle))
+        expected = cfg.resolved_hinge_gap * np.sin(np.radians(cfg.cone_angle))
         assert report.hinge_clearance == pytest.approx(expected, abs=0.01)
 
         out = export_print_plate(tmp_path / "cone.3mf", cfg, count=3)
@@ -536,7 +552,7 @@ class TestTwistedPlateCAD:
     def test_pin_hinge_fit_check(self):
         _require_cad()
         assert check_hinge_fit().ok
-        assert check_hinge_fit().hinge_clearance == pytest.approx(0.2, abs=0.01)
+        assert check_hinge_fit().hinge_clearance == pytest.approx(0.3, abs=0.01)
         tight = check_hinge_fit(pin_clearance=0.0)
         assert not tight.ok
         assert {issue.parts for issue in tight.issues} == {("pin", "top knuckles")}

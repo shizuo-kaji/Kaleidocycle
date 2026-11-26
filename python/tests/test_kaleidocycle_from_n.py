@@ -257,6 +257,36 @@ def test_kaleidocycle_from_n_objective_selection():
             assert len(meaningless_warnings) == 0, f"Got meaningless warning for n={n}, oriented={oriented}"
 
 
+@pytest.mark.parametrize(
+    ("n", "oriented", "expected"),
+    [
+        (8, True, "bending"),
+        (9, True, "mean_cos"),
+        (8, False, "mean_cos"),
+        (7, False, "neg_mean_cos"),
+    ],
+)
+def test_default_objective_matches_constructor(n, oriented, expected):
+    """``Kaleidocycle(n)`` equals an explicit run with ``default_objective``."""
+    from kaleidocycle import (
+        SolverOptions,
+        default_objective,
+        optimize_cycle,
+        random_hinges,
+    )
+
+    assert default_objective(n, oriented) == expected
+    initial = random_hinges(n, seed=3, oriented=oriented).as_array()
+    config = ConstraintConfig(oriented=oriented, constant_torsion=True)
+    manual = optimize_cycle(
+        initial, config, objective=expected, options=SolverOptions(maxiter=50)
+    )
+    auto = Kaleidocycle(
+        n, oriented=oriented, seed=3, solver_options={"maxiter": 50}
+    )
+    np.testing.assert_allclose(auto.hinges, manual.hinges)
+
+
 def test_kaleidocycle_n_property():
     """Test n property is correctly set."""
     kc = Kaleidocycle(7, seed=42)

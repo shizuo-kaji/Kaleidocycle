@@ -145,6 +145,7 @@ from .integrable import (  # noqa: F401
 from .solvers import (
     OptimizationSummary,
     SolverOptions,
+    default_objective,
     moore_penrose_inverse,
     newton_solve,
     optimize_cycle,
@@ -279,6 +280,7 @@ __all__ = [
     "moore_penrose_inverse",
     "newton_solve",
     "optimize_cycle",
+    "default_objective",
     "optimize_curvature_torsion",
     "optimize_multi_seed",
     "optimize_with_linking_constraint",

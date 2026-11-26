@@ -4,8 +4,8 @@ Two checks guard the parts produced by :mod:`kaleidocycle.cad`:
 
 hinge fit (:func:`check_hinge_fit`)
     A link and a copy of it attached at its bottom hinge must not touch:
-    knuckles, pins, cones and sockets keep their clearances, except the
-    intended press fit of a pin in the bottom knuckles.  Needs only a
+    knuckles, pins, cones and sockets keep their clearances; a pin may touch
+    the bottom knuckles that hold it (a press fit) but not cut into them.  Needs only a
     :class:`~kaleidocycle.cad.TwistedPlateConfig`.
 
 motion (:func:`check_kaleidocycle_clearance`)

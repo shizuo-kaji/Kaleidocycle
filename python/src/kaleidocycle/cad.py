@@ -7,9 +7,9 @@ width, edge length, hinge dimensions, and optional captive ring.
 
 Adjacent units are joined by separately printed octagonal hinge pins, as
 in NovemberKou's "Möbius Kaleidocycle (Material-saving Design)": each pin
-is held by the bottom knuckles of one unit (zero radial clearance at the
-octagon corners, a light press fit) and the top knuckles of the
-neighbouring unit rotate on it with a small radial clearance.  The pins
+is held by the bottom knuckles of one unit (a snug fit with a small radial
+clearance at the octagon corners) and the top knuckles of the neighbouring
+unit rotate on it with a wider clearance.  The pins
 are laid out on the same print plate as the units.
 
 ``build123d`` is an optional dependency; importing this module does not
@@ -176,13 +176,18 @@ _MIN_WALL = 0.8
 # Height (mm) of the flat bed contact cut from the round bottom knuckles.
 _KNUCKLE_FOOT_DEPTH = 0.3
 # Hinge bores are printed with a horizontal axis, so their top is a 45-degree
-# teardrop bridged by a flat this far (mm) above the pin corners.
-_BORE_FLAT_MARGIN = 0.1
+# teardrop bridged by a flat this far (mm) above the bore circle.  The margin
+# leaves room for the printed bridge to sag without touching the turning pin.
+_BORE_FLAT_MARGIN = 0.3
 
 
 HINGE_TYPES = ("pin", "cone")
 # Default knuckle diameters per hinge type (mm), from the reference designs.
 _DEFAULT_HINGE_DIAMETER = {"pin": 7.0, "cone": 6.0}
+# Default axial gap between mating knuckles per hinge type (mm).  Pin hinges
+# use 0.4 mm: 0.2 mm, as in the reference design, fitted but turned stiffly
+# in a test print.  For cones the gap is also their axial play.
+_DEFAULT_HINGE_GAP = {"pin": 0.4, "cone": 0.2}
 
 
 @dataclass(frozen=True)
@@ -193,8 +198,11 @@ class TwistedPlateConfig:
 
     ``hinge_type="pin"`` ("Material-saving Design")
         A separately printed regular octagonal pin, 4 mm corner to corner,
-        held in 4.0 mm bores of the bottom knuckles and rotating in 4.4 mm
-        bores of the top knuckles of the neighbouring unit; 7 mm knuckles.
+        held in 4.18 mm bores of the bottom knuckles and rotating in 4.6 mm
+        bores of the top knuckles of the neighbouring unit; 7 mm knuckles
+        with 0.4 mm axial gaps.  The clearances are wider than the reference
+        design's (4.0 mm and 4.4 mm bores, 0.2 mm gaps), with which a test
+        print's pin did not go in and the knuckles turned stiffly.
     ``hinge_type="cone"`` ("Twisted Plate with Ring")
         No separate parts: the two outer bottom knuckles carry 60-degree cones
         (4 mm base) pointing inward, which snap into matching conical sockets
@@ -211,29 +219,40 @@ class TwistedPlateConfig:
     edge_length:
         Center-to-center distance between the bottom and top hinge axes (mm).
     body_thickness:
-        Thickness of the twisted plate body (mm).
+        Thickness of the twisted plate body (mm; default 2.4, six lines of a
+        0.4 mm nozzle).  Thicker plates print more reliably but bring links
+        that do not share a hinge closer together; the contact check reports
+        the remaining margin.
     hinge_type:
         ``"pin"`` (separate octagonal pins) or ``"cone"`` (snap-in cone pivots).
     hinge_diameter:
         Outer diameter of the hinge knuckles (mm); ``None`` selects 7 mm for
         pins and 6 mm for cones.
     hinge_gap:
-        Axial clearance between mating knuckles along a hinge axis (mm).  For
-        cone hinges this is also the gap between a cone's base face and the
+        Axial clearance between mating knuckles along a hinge axis (mm);
+        ``None`` selects 0.4 mm for pins and 0.2 mm for cones.  For cone
+        hinges this is also the gap between a cone's base face and the
         socketed knuckle, i.e. the axial play of the cone in its socket.
     gap:
-        Radial clearance between a hinge barrel and the mating plate edge (mm).
+        Radial clearance between a hinge barrel and the mating plate edge
+        (mm; default 0.4).  Between its own bottom knuckles the plate's lower
+        edge is printed as a short bridge over the mating knuckles, and the
+        margin leaves room for it to sag.
     num_knuckles:
         Total odd number of hinge knuckles shared across the joint (>= 3).
     pin_diameter:
         Corner-to-corner (circumscribed) diameter of the octagonal hinge pin.
     pin_fit_clearance:
         Radial clearance between the pin corners and the bores of the bottom
-        knuckles, which hold the pin.  ``0`` (default) gives a light press fit
-        on the eight corners so the pin neither turns nor wobbles there.
+        knuckles, which hold the pin (default 0.09 mm).  FDM printers make
+        horizontal holes slightly undersized, so this is a snug push fit on
+        most printers; in test prints 0 and 0.07 mm kept the pin out and
+        0.1 mm let it slide out.  Raise it if the pin does not go in; lower it (``0`` is
+        a press fit) if the pin slides out.
     pin_clearance:
         Radial clearance between the pin corners and the bores of the top
-        knuckles, which rotate on the pin.
+        knuckles, which rotate on the pin (default 0.3 mm).  Raise it if the
+        hinge turns stiffly.
     pin_core_diameter:
         Corner-to-corner diameter of the hollow octagonal core of the pin;
         ``0`` for a solid pin.  The core saves material and lets the pin
@@ -267,15 +286,15 @@ class TwistedPlateConfig:
     torsion_angle: float = float(np.deg2rad(72.8))
     ribbon_width: float = 43.0
     edge_length: float = 29.0
-    body_thickness: float = 1.8
+    body_thickness: float = 2.4
     hinge_type: str = "pin"
     hinge_diameter: float | None = None
-    hinge_gap: float = 0.2
-    gap: float = 0.2
+    hinge_gap: float | None = None
+    gap: float = 0.4
     num_knuckles: int = 5
     pin_diameter: float = 4.0
-    pin_fit_clearance: float = 0.0
-    pin_clearance: float = 0.2
+    pin_fit_clearance: float = 0.09
+    pin_clearance: float = 0.3
     pin_core_diameter: float = 1.8
     pin_chamfer: float = 0.5
     cone_diameter: float = 4.0
@@ -314,6 +333,13 @@ class TwistedPlateConfig:
         return _DEFAULT_HINGE_DIAMETER.get(self.hinge_type, 7.0)
 
     @property
+    def resolved_hinge_gap(self) -> float:
+        """Axial knuckle gap, defaulting per ``hinge_type``."""
+        if self.hinge_gap is not None:
+            return float(self.hinge_gap)
+        return _DEFAULT_HINGE_GAP.get(self.hinge_type, 0.4)
+
+    @property
     def hinge_radius(self) -> float:
         """Outer radius of each hinge knuckle."""
         return 0.5 * self.resolved_hinge_diameter
@@ -349,9 +375,14 @@ class TwistedPlateConfig:
         return self.pin_radius + float(self.pin_clearance)
 
     @property
-    def bore_flat_height(self) -> float:
-        """Height of the flat teardrop top of each bore above the hinge axis."""
-        return self.pin_radius + _BORE_FLAT_MARGIN
+    def fixed_bore_flat_height(self) -> float:
+        """Height of the flat teardrop top of the fixed bores above the axis."""
+        return self.fixed_bore_radius + _BORE_FLAT_MARGIN
+
+    @property
+    def free_bore_flat_height(self) -> float:
+        """Height of the flat teardrop top of the free bores above the axis."""
+        return self.free_bore_radius + _BORE_FLAT_MARGIN
 
     @property
     def cone_radius(self) -> float:
@@ -366,7 +397,7 @@ class TwistedPlateConfig:
     @property
     def snap_deflection(self) -> float:
         """Axial deflection a socketed knuckle needs to pass a cone tip (mm)."""
-        return max(self.cone_height - float(self.hinge_gap), 0.0)
+        return max(self.cone_height - self.resolved_hinge_gap, 0.0)
 
     @property
     def z_bottom_hinge(self) -> float:
@@ -399,15 +430,16 @@ class TwistedPlateConfig:
 
         Knuckle ``k`` occupies segment ``k`` of ``num_knuckles`` equal
         segments; bottom knuckles have even ``k``, top knuckles odd ``k``.
-        Pin hinges split ``hinge_gap`` between both neighbours of every
-        interior boundary.  Cone hinges keep the bottom knuckles full length;
-        each top knuckle gives way by ``hinge_gap`` towards a cone and by
+        Pin hinges split the axial gap (:attr:`resolved_hinge_gap`) between
+        both neighbours of every interior boundary.  Cone hinges keep the
+        bottom knuckles full length; each top knuckle gives way by the gap
+        towards a cone and by
         ``snap_gap`` on the plain side of a socketed knuckle.
         """
         w = float(self.ribbon_width)
         n = int(self.num_knuckles)
         seg = w / n
-        g = float(self.hinge_gap)
+        g = self.resolved_hinge_gap
         bottom: list[tuple[float, float]] = []
         top: list[tuple[float, float]] = []
         for k in range(n):
@@ -437,7 +469,7 @@ class TwistedPlateConfig:
             ("edge_length", self.edge_length),
             ("body_thickness", self.body_thickness),
             ("hinge_diameter", self.resolved_hinge_diameter),
-            ("hinge_gap", self.hinge_gap),
+            ("hinge_gap", self.resolved_hinge_gap),
             ("gap", self.gap),
             ("pin_diameter", self.pin_diameter),
             ("pin_fit_clearance", self.pin_fit_clearance),
@@ -463,7 +495,7 @@ class TwistedPlateConfig:
             raise ValueError("body_thickness must be positive")
         if self.resolved_hinge_diameter <= 0:
             raise ValueError("hinge_diameter must be positive")
-        if self.hinge_gap < 0:
+        if self.resolved_hinge_gap < 0:
             raise ValueError("hinge_gap must be non-negative")
         if self.gap < 0:
             raise ValueError("gap must be non-negative")
@@ -474,7 +506,7 @@ class TwistedPlateConfig:
             )
         if self.num_knuckles < 3 or self.num_knuckles % 2 == 0:
             raise ValueError("num_knuckles must be an odd integer >= 3")
-        if self.ribbon_width / self.num_knuckles <= self.hinge_gap:
+        if self.ribbon_width / self.num_knuckles <= self.resolved_hinge_gap:
             raise ValueError("ribbon_width / num_knuckles must exceed hinge_gap")
         if self.loft_slices < 5:
             raise ValueError("loft_slices must be at least 5")
@@ -531,9 +563,7 @@ class TwistedPlateConfig:
             raise ValueError("pin_clearance must be non-negative")
         if self.fixed_bore_radius <= 0.5 * self.pin_radius:
             raise ValueError("pin_fit_clearance is too negative for pin_diameter")
-        bore_top = max(
-            self.fixed_bore_radius, self.free_bore_radius, self.bore_flat_height
-        )
+        bore_top = max(self.fixed_bore_flat_height, self.free_bore_flat_height)
         if self.hinge_radius - bore_top < _MIN_WALL:
             raise ValueError(
                 f"hinge_diameter must leave a {_MIN_WALL} mm wall around the pin "
@@ -994,14 +1024,14 @@ def build_twisted_plate_parts(
         plate = plate - _build_bore(
             bd,
             radius=cfg.fixed_bore_radius,
-            flat_height=cfg.bore_flat_height,
+            flat_height=cfg.fixed_bore_flat_height,
             z_axis=cfg.z_bottom_hinge,
             length=bore_len,
         )
         plate = plate - _build_bore(
             bd,
             radius=cfg.free_bore_radius,
-            flat_height=cfg.bore_flat_height,
+            flat_height=cfg.free_bore_flat_height,
             z_axis=cfg.z_top_hinge,
             length=bore_len,
             rotation_deg=alpha_deg,

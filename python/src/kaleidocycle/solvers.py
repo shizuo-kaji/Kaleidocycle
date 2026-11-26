@@ -74,6 +74,21 @@ def _get_objective(name: str, target=0, oriented=True) -> ObjectiveFunc:
     raise ValueError(f"unknown objective '{name}'")
 
 
+def default_objective(n: int, oriented: bool) -> str:
+    """Objective that ``Kaleidocycle(n, oriented)`` minimises.
+
+    The mean hinge cosine is constant (``-1``) on oriented rings with even
+    ``n`` and on anti-oriented rings with odd ``n``, and its negative is
+    constant (``1``) on oriented rings. The choice avoids those cases:
+    ``"bending"`` for oriented even ``n``, ``"mean_cos"`` for oriented odd
+    ``n`` and anti-oriented even ``n``, and ``"neg_mean_cos"`` (the minimum
+    torsion angle) for anti-oriented odd ``n``.
+    """
+    if oriented:
+        return "bending" if n % 2 == 0 else "mean_cos"
+    return "neg_mean_cos" if n % 2 == 1 else "mean_cos"
+
+
 @dataclass
 class SolverOptions:
     penalty_weight: float = 100.0

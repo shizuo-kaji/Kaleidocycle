@@ -101,7 +101,7 @@ export_json(cycle, "classic_k6.json")
 | [`Animation`](notebooks/Animation.ipynb) | アニメーション用のユーティリティ． |
 | [`AnimationScalarProperties`](notebooks/AnimationScalarProperties.ipynb) | アニメーションの診断量の計算とプロット． |
 | [`BackendComparison`](notebooks/BackendComparison.ipynb) | NumPy と（オプションの）JAX のソルバー・バックエンドの比較． |
-| [`CADModelGeneration`](notebooks/CADModelGeneration.ipynb) | オプションの `build123d` による，3D プリント用のねじれ板（twisted plate）リンクのパラメトリック CAD 出力（`.stl`，`.step`，`.3mf`）． |
+| [`CADModelGeneration`](notebooks/CADModelGeneration.ipynb) | オプションの `build123d` による，3D プリント用のねじれ板（twisted plate）リンクのパラメトリック CAD 出力（`.stl`，`.step`，`.3mf`）．パラメータのセルで，リング（`N`，向き，最適化か楕円関数族の厳密解か，目的関数，ソルバー，捩率角）と印刷用の寸法を選べます． |
 
 ## Kaleidocycle Studio
 
@@ -509,27 +509,33 @@ Bambu Studio 02.08.02 は，Bambu のプロジェクト設定を持たない 3MF
   （`build_hinge_pin`）でつなぎます．プリントプレートにはユニットごとに 1 本のピン
   （オブジェクト `hinge_pin`，寝かせた状態．省くには `with_pins=False`）が含まれ，
   組立体ではピンが所定の位置に表示されます．ピンは角から角までが 4 mm（`pin_diameter`）で，
-  直径 1.8 mm の中空の芯と両端の 0.5 mm の面取りを持ちます．下側のナックルは 4.0 mm の穴で
-  ピンを保持し，角での隙間はゼロ（`pin_fit_clearance=0.0`）なので，ピンは圧入されてがたつきません．
-  隣のリンクの上側のナックルは 4.4 mm の穴でピンの周りを回ります（`pin_clearance=0.2`）．
-  ナックルは直径 7 mm，軸方向の隙間は 0.2 mm（`hinge_gap`）で，穴は上部が平らな涙滴形なので
-  サポートなしで印刷できます．穴がきつく仕上がるプリンタでは `pin_fit_clearance` を少し
-  （例えば 0.05 に）上げ，ヒンジが固い場合は `pin_clearance` を上げてください．
+  直径 1.8 mm の中空の芯と両端の 0.5 mm の面取りを持ちます．下側のナックルは 4.18 mm の穴で
+  ピンを保持します（角での隙間 `pin_fit_clearance=0.09`）．FDM プリンタでは横向きの穴が少し小さめに
+  仕上がるので，これでしっかり押し込む程度のはめ合いになります．隣のリンクの上側のナックルは
+  4.6 mm の穴でピンの周りを回ります（`pin_clearance=0.3`）．ナックルは直径 7 mm，軸方向の隙間は
+  0.4 mm（`hinge_gap`）で，相手のナックルの上をブリッジで渡る板の縁とナックルの間も 0.4 mm
+  あけています（`gap`）．穴は上部が平らな涙滴形で，平らな部分を穴の円より 0.3 mm 上に置いているので，
+  サポートなしで印刷でき，ブリッジが垂れても回るピンに触れません．これらの隙間は参照デザイン
+  （4.0 mm と 4.4 mm の穴，0.2 mm の隙間）より広くしてあります．参照デザインの寸法では，試し印刷で
+  ピンが入らず，ナックルの回転も固かったためです．それでもピンが入らなければ `pin_fit_clearance` を
+  少し上げ，抜けてしまうなら下げてください（試し印刷では 0.07 mm できつすぎ，0.1 mm で緩すぎました）．ヒンジが固い場合は `pin_clearance`，
+  `hinge_gap`，`gap` を上げてください．
 - `"cone"`（"Twisted Plate with Ring"）: 別部品はありません．外側の 2 つの下側ナックルに
   底面の直径 4 mm，60 度の円錐（`cone_diameter`，`cone_angle`）があり，隣のリンクの上側ナックルの
   外端にあるソケットにはまります．軸方向の遊びは 0.2 mm（円錐面の法線方向に 0.17 mm）です．
   ナックルは直径 6 mm で，ソケット側のナックルは内側に 2.25 mm の隙間（`snap_gap`）を持ち，
   組み立てるときに円錐の先端（約 0.95 mm）を乗り越えてたわめるようになっています．
 
+板の厚みは既定で 2.4 mm（`body_thickness`，0.4 mm ノズルで 6 本分）で，薄い板より印刷に失敗しにくくなっています．
 既定の帯の幅は 43 mm です．上の `Kaleidocycle(7, oriented=False)` で辺の長さを 29 mm にすると，
-幅が 44–45 mm では 2 つ隣のリンクどうしがリングの中心付近で擦れますが，43 mm なら 1 回転を通して
-少なくとも 0.9 mm 離れています．
+幅が 44–45 mm では 2 つ隣のリンクどうしがリングの中心付近で接触しますが，43 mm なら 1 回転を通して
+少なくとも 0.66 mm 離れています．板を厚くするとこの余裕は減りますが，どの出力でも自動で検査されます．
 
 ### 接触チェック
 
 どの出力でも，まず部品の接触を検査します（`kaleidocycle.cad_check`）．`check_hinge_fit`
-はリンクをその複製とつなぎ，ピンの意図した圧入を除いて，ナックル，ピン，円錐，ソケットが
-離れていることを確認します．カライドサイクルの場合は，`check_kaleidocycle_clearance` がさらに
+はリンクをその複製とつなぎ，ナックル，ピン，円錐，ソケットが離れていることを確認します．
+ピンは保持するナックルに触れてもよいですが，食い込んではいけません．カライドサイクルの場合は，`check_kaleidocycle_clearance` がさらに
 可積分な mKdV／sine–Gordon フローで 1 回転を追跡し，すべてのリンクの組の距離を測ります．
 ヒンジを共有しないリンクどうしは `min_clearance`（0.4 mm）以上離れている必要があり，
 隣り合うリンクはヒンジ以外で接してはいけません．接触があると `ClearanceWarning`

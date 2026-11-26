@@ -105,7 +105,7 @@ the project environment.
 | [`Animation`](notebooks/Animation.ipynb) | Animation utilities. |
 | [`AnimationScalarProperties`](notebooks/AnimationScalarProperties.ipynb) | Computes and plots animation diagnostics. |
 | [`BackendComparison`](notebooks/BackendComparison.ipynb) | Compares the NumPy and optional JAX solver backends. |
-| [`CADModelGeneration`](notebooks/CADModelGeneration.ipynb) | Parametric 3D-printable twisted-plate CAD export (`.stl`, `.step`, `.3mf`) with optional `build123d`. |
+| [`CADModelGeneration`](notebooks/CADModelGeneration.ipynb) | Parametric 3D-printable twisted-plate CAD export (`.stl`, `.step`, `.3mf`) with optional `build123d`. A parameter cell chooses the ring (`N`, orientation, optimisation or an exact elliptic family, objective, solver, torsion) and the print geometry. |
 
 ## Kaleidocycle Studio
 
@@ -564,14 +564,19 @@ Two hinge types (`hinge_type`) reproduce NovemberKou's printed designs:
   unit (object `hinge_pin`, lying flat; pass `with_pins=False` to omit them),
   and assemblies show the pins in place. The pin is 4 mm corner to corner
   (`pin_diameter`) with a hollow 1.8 mm core and 0.5 mm end chamfers. The
-  bottom knuckles hold it in 4.0 mm bores, zero clearance at the corners
-  (`pin_fit_clearance=0.0`), so the pin presses in and does not wobble. The
-  top knuckles of the neighbouring link turn on it in 4.4 mm bores
-  (`pin_clearance=0.2`). Knuckles are 7 mm in diameter with 0.2 mm axial gaps
-  (`hinge_gap`), and the bores have a flat teardrop top so that they print
-  without support. If your printer makes holes tight, raise
-  `pin_fit_clearance` slightly (for example to 0.05); if the hinge binds,
-  raise `pin_clearance`.
+  bottom knuckles hold it in 4.18 mm bores (`pin_fit_clearance=0.09` at the
+  corners); FDM printers make horizontal holes slightly undersized, so this
+  is a snug push fit. The top knuckles of the neighbouring link turn on it in
+  4.6 mm bores (`pin_clearance=0.3`). Knuckles are 7 mm in diameter with
+  0.4 mm axial gaps (`hinge_gap`), and the plate edge bridged over the mating
+  knuckles stays 0.4 mm clear of them (`gap`). The bores have a flat teardrop
+  top 0.3 mm above the bore, so that they print without support and the
+  bridged top can sag without touching the pin. These clearances are wider
+  than the reference design's (4.0 mm and 4.4 mm bores, 0.2 mm gaps): in a
+  test print its pin did not go in and its knuckles turned stiffly. If the pin
+  still does not go in, raise `pin_fit_clearance` slightly; if it slides out,
+  lower it (in test prints 0.07 mm was too tight and 0.1 mm too loose). If the hinge turns stiffly, raise `pin_clearance`,
+  `hinge_gap` or `gap`.
 - `"cone"` ("Twisted Plate with Ring"): no separate parts. The two outer
   bottom knuckles carry 60-degree cones with a 4 mm base (`cone_diameter`,
   `cone_angle`) that snap into matching sockets in the outer ends of the
@@ -580,16 +585,19 @@ Two hinge types (`hinge_type`) reproduce NovemberKou's printed designs:
   gap (`snap_gap`) on its inner side so that it can flex past the cone tip
   (about 0.95 mm) during assembly.
 
-The default ribbon is 43 mm wide: for the `Kaleidocycle(7, oriented=False)`
-above with 29 mm edges, links two apart graze each other near the centre of
-the ring at 44-45 mm, while 43 mm keeps them at least 0.9 mm apart through
-the whole rotation.
+The plates are 2.4 mm thick by default (`body_thickness`, six lines of a
+0.4 mm nozzle), which prints more reliably than thinner plates. The default
+ribbon is 43 mm wide: for the `Kaleidocycle(7, oriented=False)` above with
+29 mm edges, links two apart touch each other near the centre of the ring at
+44-45 mm, while 43 mm keeps them at least 0.66 mm apart through the whole
+rotation. Thicker plates reduce this margin, which every export checks.
 
 ### Contact checks
 
 Every export checks the parts for contacts first (`kaleidocycle.cad_check`).
 `check_hinge_fit` joins a link to a copy of itself and requires the knuckles,
-pins, cones and sockets to stay apart, except the intended press fit of a pin.
+pins, cones and sockets to stay apart; a pin may touch the knuckles that hold
+it, but not cut into them.
 For a kaleidocycle, `check_kaleidocycle_clearance` also traces one full
 rotation with the integrable mKdV / sine-Gordon flow and measures every pair
 of links: links that do not share a hinge must stay `min_clearance` (0.4 mm)

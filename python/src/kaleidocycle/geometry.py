@@ -299,15 +299,8 @@ class Kaleidocycle:
     ) -> np.ndarray:
         """Create an optimized kaleidocycle with n tetrahedra.
 
-        Chooses an appropriate objective based on n and oriented parity:
-        - mean_cos: Minimizes mean cosine (for configurations where it's not constant)
-        - neg_mean_cos: Maximizes mean cosine (for non-oriented kaleidocycles)
-
-        The objective is chosen such that:
-        - For oriented with even n: use neg_mean_cos (mean_cos would be constant -1)
-        - For oriented with odd n: use mean_cos
-        - For non-oriented with even n: use mean_cos
-        - For non-oriented with odd n: use neg_mean_cos (mean_cos would be constant -1)
+        The objective is :func:`~kaleidocycle.solvers.default_objective`, which
+        avoids the cosine objectives where they are constant.
 
         Args:
             n: Number of tetrahedra
@@ -318,31 +311,9 @@ class Kaleidocycle:
         Returns:
             Optimized hinges array, shape (n+1, 3)
         """
-        from .constraints import ConstraintConfig
-        from .solvers import optimize_cycle, SolverOptions
+        from .solvers import SolverOptions, default_objective, optimize_cycle
 
-        # Choose appropriate objective based on n and oriented parity
-        # From the warnings in optimize_cycle:
-        # - mean_cos is meaningless (always -1) when:
-        #   (oriented and n%2==0) or (not oriented and n%2==1)
-        # - neg_mean_cos is meaningless (always 1) when: oriented
-        #
-        # Objective selection:
-        # - oriented + even n: Both mean_cos and neg_mean_cos are meaningless → use "bending"
-        # - oriented + odd n: mean_cos is meaningful → use "mean_cos"
-        # - non-oriented + even n: mean_cos is meaningful → use "mean_cos"
-        # - non-oriented + odd n: mean_cos is meaningless → use "neg_mean_cos"
-        if oriented:
-            if n % 2 == 0:
-                # Both cosine objectives are meaningless, use bending energy
-                objective = "bending"
-            else:
-                objective = "mean_cos"
-        else:
-            if n % 2 == 1:
-                objective = "neg_mean_cos"
-            else:
-                objective = "mean_cos"
+        objective = default_objective(n, oriented)
 
         # Create initial random configuration
         initial = random_hinges(n, seed=seed, oriented=oriented).as_array()
