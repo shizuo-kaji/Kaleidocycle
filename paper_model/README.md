@@ -7,7 +7,7 @@
 - [K7](paper-K7.pdf): Mobius Kaleidocycle with 7 tetrahedra
 - [K8](paper-K8.pdf): Mobius Kaleidocycle with 8 tetrahedra
 - [K9](paper-K9.pdf): Mobius Kaleidocycle with 9 tetrahedra
-- Paper plans for Kaleidocycles with 10 or more tetrahedra can be obtained by [Maple code](../Kaleidocycle.mw)
+- Paper plans for Kaleidocycles with 10 or more tetrahedra can be obtained by [Maple code](../obsolete_maple_mathematica/Kaleidocycle.mw)
 
 ## How to make
 

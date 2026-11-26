@@ -33,17 +33,17 @@ mKdV 階層と半離散 sine–Gordon flow による変形をアニメーショ�
 # リポジトリ構成
 - [`3d_model/`](3d_model/) には3Dプリンタで出力可能なモデルがあります.
 - [`paper_model/`](paper_model/) には折り紙の展開図があります.
-- [`hexagon/`](hexagon/) にはカライドサイクルの仲間であるヘクサフレクサゴンの折り紙があります．また，カライドサイクルの折り方の説明図もあります．
 - [`python/`](python/) — Python による実装（`src/kaleidocycle/` 配下のライブラリ，ノートブック，サンプル）
-- [Kaleidocycle.mw](Kaleidocycle.mw) は Maple のコードで，様々な条件下でカライドサイクルの形状や動きを計算し，可視化します．折り紙展開図の出力機能もあります．
-- [Kaleidocycle.nb](Kaleidocycle.nb) は Mathematica のコードで，上の Maple コードの機能限定版です．
+- [`obsolete_maple_mathematica/`](obsolete_maple_mathematica/) には旧版のコードがあります．
+  - [Kaleidocycle.mw](obsolete_maple_mathematica/Kaleidocycle.mw) は Maple のコードで，様々な条件下でカライドサイクルの形状や動きを計算し，可視化します．折り紙展開図の出力機能もあります．
+  - [Kaleidocycle.nb](obsolete_maple_mathematica/Kaleidocycle.nb) は Mathematica のコードで，上の Maple コードの機能限定版です．
 
 ## ドキュメント
 - [Python ツールキット](python/README.ja.md)（[English](python/README.md)） —
   インストール，ノートブック，厳密解の構成，可積分変形，剛性解析，CAD 出力
 - [Kaleidocycle Studio](python/web/README.md)（英語） — ブラウザ版スタジオ：可積分フロー，拘束付き編集，Model lab，解析グラフ
 - [Python API リファレンス](python/api.md)（英語） — 可積分変形の API と，旧コードのルーチン一覧
-- [3Dプリンタ用のモデル](3d_model/README.ja.md)，[折り紙の展開図と折り方](paper_model/README.ja.md)，[ヘクサフレクサゴン](hexagon/README.ja.md)
+- [3Dプリンタ用のモデル](3d_model/README.ja.md)，[折り紙の展開図と折り方](paper_model/README.ja.md)
 
 ## Python
 1. `cd python`

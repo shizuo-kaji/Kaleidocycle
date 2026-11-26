@@ -7,7 +7,7 @@
 - [K7](paper-K7.pdf): 7個の四面体からなるメビウス・カライドサイクル
 - [K8](paper-K8.pdf): 8個の四面体からなるメビウス・カライドサイクル
 - [K9](paper-K9.pdf): 9個の四面体からなるメビウス・カライドサイクル
-- 10個以上の展開図は [Mapleプログラム](../Kaleidocycle.mw) で生成できます(Maple というソフトウェアが必要です)
+- 10個以上の展開図は [Mapleプログラム](../obsolete_maple_mathematica/Kaleidocycle.mw) で生成できます(Maple というソフトウェアが必要です)
 
 ## 折り方
 

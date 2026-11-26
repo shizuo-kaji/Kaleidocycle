@@ -30,14 +30,13 @@ and supports interactive editing of vertex positions and torsion-angles.
 ## Repository Tour
 - [`python/`](python/) — Python scripts (package sources under
   `src/kaleidocycle/`, notebooks, examples)
-- [`Kaleidocycle.mw`](Kaleidocycle.mw) / [`Kaleidocycle.nb`](Kaleidocycle.nb) —
-  Maple and Mathematica scripts for symbolic construction, visualization, and
-  template export
+- [`obsolete_maple_mathematica/`](obsolete_maple_mathematica/) — legacy
+  [`Kaleidocycle.mw`](obsolete_maple_mathematica/Kaleidocycle.mw) (Maple) and
+  [`Kaleidocycle.nb`](obsolete_maple_mathematica/Kaleidocycle.nb) (Mathematica)
+  scripts for symbolic construction, visualization, and template export
 - [`3d_model/`](3d_model/) — STL for 3D printing
   (models by [Kamagata Design Studio](https://kdstudio.jp/))
 - [`paper_model/`](paper_model/) — printable templates for hand-folded models
-- [`hexagon/`](hexagon/) — hexaflexagon cousin plus a pictorial folding guide
-  for kaleidocycles
 - [`LICENSE`](LICENSE) — MIT license for the code (see the patent note below)
 
 ## Documentation
@@ -48,8 +47,8 @@ and supports interactive editing of vertex positions and torsion-angles.
   flows, constrained editing, Model lab and analysis plots
 - [Python API reference](python/api.md) — the integrable-deformation API and
   the inventory of legacy routines
-- [3D-printable models](3d_model/README.md), [paper models](paper_model/README.md)
-  and the [hexaflexagon](hexagon/README.md)
+- [3D-printable models](3d_model/README.md) and
+  [paper models](paper_model/README.md)
 
 ## Quick Start
 ### Python toolkit
@@ -62,14 +61,15 @@ and supports interactive editing of vertex positions and torsion-angles.
 See the [Python toolkit README](python/README.md) for details.
 
 ### Maple / Mathematica
-Open `Kaleidocycle.mw` (Maple) or `Kaleidocycle.nb` (Mathematica) to reproduce
+Open `obsolete_maple_mathematica/Kaleidocycle.mw` (Maple) or
+`obsolete_maple_mathematica/Kaleidocycle.nb` (Mathematica) to reproduce
 symbolic computations. Both scripts include visualization helpers
 and export functions for paper templates and motion studies.
 
 ### Physical model assets
 - Print STL files from `3d_model/` to fabricate kaleidocycles
-- Use `paper_model/` templates for hand-folded prototypes; the `hexagon/` folder
-  also contains instructions
+- Use `paper_model/` templates and folding instructions for hand-folded
+  prototypes
 
 ## References & Further Reading
 ### Technical publications
